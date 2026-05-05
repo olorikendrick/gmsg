@@ -1,5 +1,3 @@
-use std::vec;
-
 use ratatui::{
     DefaultTerminal, Frame,
     crossterm::event::{Event, KeyCode, KeyModifiers, read},

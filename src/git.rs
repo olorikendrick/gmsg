@@ -1,8 +1,6 @@
 use anyhow::Context;
 use git2::{DiffFormat, Repository, Status, StatusEntry, Tree};
 
-use crate::git;
-
 pub fn get_diff(repository: &Repository) -> anyhow::Result<String> {
     let filter_staged = |status: &StatusEntry| {
         status.status().intersects(

@@ -22,7 +22,7 @@ where
 pub fn build_commit_agent() -> anyhow::Result<impl GenerateCommitMsg> {
     let model = gemini::Client::from_env()?;
     let agent =     model
-        .agent("gemini-2.5-flash-lite")
+        .agent("gemini-2.5-flash")
         .preamble(
             "You are a git expert. Write a conventional commit message based on the following diff.
 Focus on what the change DOES from a user or system behavior perspective, not how the code changed internally.

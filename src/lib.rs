@@ -1,4 +1,4 @@
-pub mod types;
+pub mod gmsg;
 
 pub mod ai;
 pub mod editor;
@@ -13,7 +13,7 @@ use rig::client::{CompletionClient, ProviderClient};
 use rig::providers::gemini;
 use std::path::PathBuf;
 
-use crate::types::Gmsg;
+use crate::gmsg::Gmsg;
 
 pub async fn run() -> anyhow::Result<()> {
     let cli = Gmsg::parse();
@@ -29,7 +29,7 @@ pub async fn run() -> anyhow::Result<()> {
     };
 
     let repository =
-        Repository::open(wdir)
+        Repository::discover(wdir)
         .context("Failed to open a git repository in the specified directory,Check if it exists or if you have neccessary permisions")?;
 
     let diff = git::get_diff(&repository)?;
@@ -41,6 +41,14 @@ pub async fn run() -> anyhow::Result<()> {
             .run(&mut terminal)
             .context("Failed to initialize inline editor")?;
         ratatui::restore();
+    }
+    if !std::io::IsTerminal::is_terminal(&std::io::stdout()) {
+        println!("{}", out);
+        return Ok(());
+    }
+    if cli.copy {
+        //copy
+        return Ok(());
     }
     match git::commit(&repository, &out) {
         Ok(_) => {
