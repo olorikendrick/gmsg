@@ -1,7 +1,7 @@
 use anyhow::Context;
 use git2::{DiffFormat, Repository, Status, StatusEntry, Tree};
 
-pub fn run(repository: Repository) -> anyhow::Result<String> {
+pub fn get_diff(repository: Repository) -> anyhow::Result<String> {
     let filter_staged = |status: &StatusEntry| {
         status.status().intersects(
             Status::INDEX_DELETED
@@ -47,4 +47,11 @@ pub fn run(repository: Repository) -> anyhow::Result<String> {
     })
     .unwrap();
     Ok(out)
+}
+
+
+pub fn commit(message:&str)->anyhow::Result<()>{
+
+
+    Ok(())
 }
