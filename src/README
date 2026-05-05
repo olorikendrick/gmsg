@@ -1,0 +1,91 @@
+# GMSG
+**AI-powered utility for generating conventional commit messages.**
+
+`gmsg` is a high-performance CLI tool built in Rust for generating commit messages.It uses AI to analyze your staged diffs and generate messages base on conventional commit specification.
+
+---
+
+## 🚀 Features
+
+*   **Spec-Grounded:** Uses the  `Conventional Commits`[](https://www.conventionalcommits.org/en/v1.0.0) specification as a system prompt to ensure total compliance.You can also modify the system prompt to align more with your preffered specifications
+*   **Interactive TUI:** Review and edit generated messages in a `Ratatui`[](https://ratatui.rs/)-powered editor before finalizing.
+* **UNIX Compliant**:Automatically discover closest git repositories in your current folder and TTY/Pipe Aware behavior
+*   **Clipboard & Amend Support:**: Easily copy messages to your clipboard or amend the most recent commit.
+*  **Multi Provider and Model Support**:Built with `Rig`[](https://rig.rs/) providing excellent support for a wide range of LLM providers and models of your choice
+---
+
+## 🛠 Installation
+
+*(Ensure you have your approiprate key set in your environment variables)*
+
+```bash
+export <Provide_Key>="your_api_key_here"
+cargo install gsmg .
+```
+
+Or you can download prebuilt binaries
+
+---
+
+## 📖 Usage
+
+### **Standard Workflow**
+Stage your changes and let `gmsg` handle the whole commit process.
+```bash
+git add .
+gmsg
+```
+
+### **Interactive Review**
+You might want to review and modify generated messages before further action:
+```bash
+gmsg -i
+```
+*   **Ctrl+S**: Save and Continue.
+*   **Ctrl+Q**: Discard and Exit.
+
+### **The "Helper" Mode**
+If you just wish to generate the message 
+```bash
+# Copy to clipboard and exit
+gmsg -c
+
+# Output to a file
+gmsg > message.txt
+
+#Pipe to another utility
+gmsg | echo
+```
+
+### **Amending**
+Fix the message of your last commit based on current changes:
+```bash
+gmsg -a
+```
+
+---
+
+## ⚙️ Configuration
+
+`gmsg` is designed to be zero-config by default, utilizing an embedded `SYSTEM_PROMPT`. 
+
+| Flag | Long | Description |
+| :--- | :--- | :--- |
+| `-p` | `--path` | Path to the repository (defaults to current dir). |
+| `-i` | `--interactive` | Opens the TUI editor before committing. |
+| `-c` | `--copy` | Copies the message to clipboard and exits. |
+| `-a` | `--amend` | Amends the HEAD commit with the new message. |
+
+---
+
+## 🏗 Architecture
+
+*   **Agent Logic:** Powered by the `rig` crate for LLM orchestration.
+*   **Git Operations:** Uses `git2-rs` for robust interaction with Git
+*   **Terminal UI:** Built with `ratatui` and `ratatui-textarea` for a smooth editing experience.
+*   **Async Runtime:** Driven by `tokio` for non-blocking AI generation.
+
+---
+
+## 🛡 License
+MIT – Build something great.
