@@ -33,35 +33,23 @@ pub async fn run() -> anyhow::Result<()> {
         .context("Failed to open a git repository in the specified directory,Check if it exists or if you have neccessary permisions")?;
 
     let diff = git::get_diff(&repository)?;
-
-    let model = gemini::Client::from_env()?;
-    let agent = model
-        .agent("gemini-2.5-flash")
-        .preamble(
-            "You are a git expert. Write a conventional commit message based on the following diff.
-Focus on what the change DOES from a user or system behavior perspective, not how the code changed internally.
-Use the format: <type>(<scope>): <short description>\n\n<body>
-The body should explain WHY the change was made, not WHAT changed in the code.
-Be concise. Output only the commit message, nothing else.")
-        .build();
+    let agent = ai::build_commit_agent().context("Could not Bootstrap Agent")?;
     out = strip_backtick(&agent.generate_commit_msg(&diff).await?);
     if cli.interactive {
         let mut terminal = ratatui::init();
-         out = Editor::from(out)
+        out = Editor::from(out)
             .run(&mut terminal)
             .context("Failed to initialize inline editor")?;
         ratatui::restore();
     }
-    match git::commit(&repository,&out) {
-        Ok(_)=>{
-            eprintln!("Committed wih message: \n{}",out);
+    match git::commit(&repository, &out) {
+        Ok(_) => {
+            eprintln!("Committed wih message: \n{}", out);
         }
-        Err(e)=>{
-            eprintln!("Encountered Error While commiting {:?}",e);
+        Err(e) => {
+            eprintln!("Encountered Error While commiting {:?}", e);
         }
-        
     }
-    
 
     Ok(())
 }
