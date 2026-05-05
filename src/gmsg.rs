@@ -15,4 +15,7 @@ pub struct Gmsg {
     /// This copies the generated message to your clipboard and exits
     #[arg(short = 'c', long = "copy")]
     pub copy: bool,
+    ///Amend the most recent commit
+    #[arg(short = 'a', long = "amend")]
+    pub amend: bool,
 }

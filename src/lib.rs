@@ -33,7 +33,7 @@ pub async fn run() -> anyhow::Result<()> {
         .context("Failed to open a git repository in the specified directory,Check if it exists or if you have neccessary permisions")?;
 
     let diff = git::get_diff(&repository)?;
-    let agent = ai::build_commit_agent().context("Could not Bootstrap Agent")?;
+    let agent = ai::build_commit_agent(None).context("Could not Bootstrap Agent")?;
     out = strip_backtick(&agent.generate_commit_msg(&diff).await?);
     if cli.interactive {
         let mut terminal = ratatui::init();
