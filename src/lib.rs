@@ -37,7 +37,12 @@ pub async fn run() -> anyhow::Result<()> {
     let model = gemini::Client::from_env()?;
     let agent = model
         .agent("gemini-2.5-flash")
-        .preamble("You are a git expert,Write a standard proffesional commit message based on this diffs using conventional commit,keep it concise ")
+        .preamble(
+            "You are a git expert. Write a conventional commit message based on the following diff.
+Focus on what the change DOES from a user or system behavior perspective, not how the code changed internally.
+Use the format: <type>(<scope>): <short description>\n\n<body>
+The body should explain WHY the change was made, not WHAT changed in the code.
+Be concise. Output only the commit message, nothing else.")
         .build();
     out = strip_backtick(&agent.generate_commit_msg(&diff).await?);
     if cli.interactive {

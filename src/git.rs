@@ -55,9 +55,11 @@ pub fn get_diff(repository: &Repository) -> anyhow::Result<String> {
 pub fn commit(repository: &Repository,message:&str)->anyhow::Result<()>{
     let signature = repository.signature().context("Could not read repository Signature")?;
     let head=repository.head().context("Could not get repository head")?;
-    let tree = head.peel_to_tree().context("Could not get tree of head")?;
+    let mut index=repository.index().context("Could not get index")?;
+    let tree_id = index.write_tree().context("Could not get tree of head")?;
+    let tree = repository.find_tree(tree_id).context("Could not find tree")?;
     let parents = head.peel_to_commit().unwrap();
-    repository.commit(None, &signature, &signature, message, &tree, &[&parents]).unwrap();
+    repository.commit(Some("HEAD"), &signature, &signature, message, &tree, &[&parents]).unwrap();
 
 
 
