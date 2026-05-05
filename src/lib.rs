@@ -32,7 +32,7 @@ pub async fn run() -> anyhow::Result<()> {
         Repository::open(wdir)
         .context("Failed to open a git repository in the specified directory,Check if it exists or if you have neccessary permisions")?;
 
-    let diff = git::get_diff(repository)?;
+    let diff = git::get_diff(&repository)?;
 
     let model = gemini::Client::from_env()?;
     let agent = model
@@ -47,7 +47,7 @@ pub async fn run() -> anyhow::Result<()> {
             .context("Failed to initialize inline editor")?;
         ratatui::restore();
     }
-    match git::commit(&out) {
+    match git::commit(&repository,&out) {
         Ok(_)=>{
             eprintln!("Committed wih message: \n{}",out);
         }

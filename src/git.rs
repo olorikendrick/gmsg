@@ -1,7 +1,9 @@
 use anyhow::Context;
 use git2::{DiffFormat, Repository, Status, StatusEntry, Tree};
 
-pub fn get_diff(repository: Repository) -> anyhow::Result<String> {
+use crate::git;
+
+pub fn get_diff(repository: &Repository) -> anyhow::Result<String> {
     let filter_staged = |status: &StatusEntry| {
         status.status().intersects(
             Status::INDEX_DELETED
@@ -50,7 +52,13 @@ pub fn get_diff(repository: Repository) -> anyhow::Result<String> {
 }
 
 
-pub fn commit(message:&str)->anyhow::Result<()>{
+pub fn commit(repository: &Repository,message:&str)->anyhow::Result<()>{
+    let signature = repository.signature().context("Could not read repository Signature")?;
+    let head=repository.head().context("Could not get repository head")?;
+    let tree = head.peel_to_tree().context("Could not get tree of head")?;
+    let parents = head.peel_to_commit().unwrap();
+    repository.commit(None, &signature, &signature, message, &tree, &[&parents]).unwrap();
+
 
 
     Ok(())
