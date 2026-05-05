@@ -3,6 +3,7 @@ use ratatui::{
     crossterm::event::{Event, KeyCode, KeyModifiers, read},
 };
 use ratatui_textarea::TextArea;
+#[derive(Default)]
 pub struct Editor<'a> {
     state: State,
     textarea: TextArea<'a>,
@@ -49,7 +50,7 @@ impl<'a> Editor<'a> {
 
     fn render(&self, frame: &mut Frame) {
         let area = frame.area();
-        let width = area.width.max(3) - 3;
+        let _width = area.width.max(3) - 3;
 
         frame.render_widget(&self.textarea, area);
     }
@@ -64,11 +65,3 @@ impl<'a> From<String> for Editor<'a> {
     }
 }
 
-impl<'a> Default for Editor<'a> {
-    fn default() -> Self {
-        Self {
-            textarea: TextArea::default(),
-            state: State::default(),
-        }
-    }
-}

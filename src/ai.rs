@@ -5,7 +5,7 @@ use rig::{
     providers::gemini,
 };
 
-const SYSTEM_PROMPT:&'static str=r#"
+const SYSTEM_PROMPT:&str=r#"
 
 The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL NOT”, “SHOULD”, “SHOULD NOT”, “RECOMMENDED”, “MAY”, and “OPTIONAL” in this document are to be interpreted as described in RFC 2119.
 
@@ -26,10 +26,13 @@ Types other than feat and fix MAY be used in your commit messages, e.g., docs: u
 The units of information that make up Conventional Commits MUST NOT be treated as case-sensitive by implementors, with the exception of BREAKING CHANGE which MUST be uppercase.
 BREAKING-CHANGE MUST be synonymous with BREAKING CHANGE, when used as a token in a footer.
 "#;
+
+#[async_trait::async_trait]
 pub trait GenerateCommitMsg {
     async fn generate_commit_msg(&self, diff: &str) -> anyhow::Result<String>;
 }
 
+#[async_trait::async_trait]
 impl<M, P> GenerateCommitMsg for Agent<M, P>
 where
     M: CompletionModel + 'static,

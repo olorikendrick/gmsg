@@ -24,16 +24,10 @@ pub fn get_diff(repository: &Repository) -> anyhow::Result<String> {
     }
 
     let tree: Option<Tree> = match repository.head() {
-        Ok(head) => match head.peel_to_tree() {
-            Ok(tree) => Some(tree),
-            Err(_) => None,
-        },
+        Ok(head) => head.peel_to_tree().ok(),
         Err(_) => None,
     };
-    let index = match repository.index() {
-        Ok(index) => Some(index),
-        Err(_) => None,
-    };
+    let index = repository.index().ok();
     let diff = repository
         .diff_tree_to_index(tree.as_ref(), index.as_ref(), None)
         .context("Could not get diff")?;

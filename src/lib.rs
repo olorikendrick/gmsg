@@ -9,15 +9,12 @@ use crate::editor::Editor;
 use anyhow::Context;
 use clap::Parser;
 use git2::Repository;
-use rig::client::{CompletionClient, ProviderClient};
-use rig::providers::gemini;
 use std::path::PathBuf;
 
 use crate::gmsg::Gmsg;
 
 pub async fn run() -> anyhow::Result<()> {
     let cli = Gmsg::parse();
-    let mut out = String::new();
 
     let wdir: PathBuf = if let Some(path) = cli.path.as_ref() {
         eprintln!("Path supplied ,{:?}", &path);
@@ -34,7 +31,7 @@ pub async fn run() -> anyhow::Result<()> {
 
     let diff = git::get_diff(&repository)?;
     let agent = ai::build_commit_agent(None).context("Could not Bootstrap Agent")?;
-    out = strip_backtick(&agent.generate_commit_msg(&diff).await?);
+   let mut  out = strip_backtick(&agent.generate_commit_msg(&diff).await?);
     if cli.interactive {
         let mut terminal = ratatui::init();
         out = Editor::from(out)
