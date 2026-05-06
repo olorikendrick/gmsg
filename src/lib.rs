@@ -3,13 +3,15 @@ pub mod gmsg;
 pub mod ai;
 pub mod editor;
 pub mod git;
-use arboard::Clipboard;
 use crate::ai::GenerateCommitMsg;
 use crate::editor::Editor;
 use anyhow::Context;
+use arboard::Clipboard;
 use clap::Parser;
 use git2::Repository;
 use std::path::PathBuf;
+use std::thread;
+use std::time::Duration;
 
 use crate::gmsg::Gmsg;
 
@@ -31,10 +33,10 @@ pub async fn run() -> anyhow::Result<()> {
 
     let diff = git::get_diff(&repository)?;
     let agent = ai::build_commit_agent(None).context("Could not Bootstrap Agent")?;
-   let mut  out = strip_backtick(&agent.generate_commit_msg(&diff).await?);
-   
+    let mut out = strip_backtick(&agent.generate_commit_msg(&diff).await?);
+
     if cli.interactive | cli.amend.is_some() {
-        let instruction=cli.amend.unwrap_or_default();
+        let instruction = cli.amend.unwrap_or_default();
         let mut terminal = ratatui::init();
         out = Editor::from(out)
             .run(&mut terminal)
@@ -46,8 +48,13 @@ pub async fn run() -> anyhow::Result<()> {
         return Ok(());
     }
     if cli.copy {
-        let mut clipboard=Clipboard::new().context("Failed to get system clipboard")?;
-        clipboard.set_text(out).context("Failed to set clipboard")?;
+        let mut clipboard = Clipboard::new().context("Failed to get system clipboard")?;
+        clipboard
+            .set_text(&out)
+            .context("Failed to set clipboard")?;
+        thread::sleep(Duration::from_secs(2));
+        eprintln!("Set Clipboard witht text{}", out);
+
         return Ok(());
     }
     match git::commit(&repository, &out) {
