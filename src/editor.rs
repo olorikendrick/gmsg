@@ -64,4 +64,3 @@ impl<'a> From<String> for Editor<'a> {
         }
     }
 }
-
