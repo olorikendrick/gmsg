@@ -3,7 +3,7 @@ pub mod gmsg;
 pub mod ai;
 pub mod editor;
 pub mod git;
-
+use arboard::Clipboard;
 use crate::ai::GenerateCommitMsg;
 use crate::editor::Editor;
 use anyhow::Context;
@@ -32,7 +32,9 @@ pub async fn run() -> anyhow::Result<()> {
     let diff = git::get_diff(&repository)?;
     let agent = ai::build_commit_agent(None).context("Could not Bootstrap Agent")?;
    let mut  out = strip_backtick(&agent.generate_commit_msg(&diff).await?);
-    if cli.interactive {
+   
+    if cli.interactive | cli.amend.is_some() {
+        let instruction=cli.amend.unwrap_or_default();
         let mut terminal = ratatui::init();
         out = Editor::from(out)
             .run(&mut terminal)
@@ -44,7 +46,8 @@ pub async fn run() -> anyhow::Result<()> {
         return Ok(());
     }
     if cli.copy {
-        //copy
+        let mut clipboard=Clipboard::new().context("Failed to get system clipboard")?;
+        clipboard.set_text(out).context("Failed to set clipboard")?;
         return Ok(());
     }
     match git::commit(&repository, &out) {
