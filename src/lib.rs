@@ -42,7 +42,7 @@ pub async fn run() -> anyhow::Result<()> {
             .run(&mut terminal)
             .context("Failed to initialize inline editor")?;
         ratatui::restore();
-        if out.is_empty(){
+        if out.is_empty() {
             eprintln!("Aborted commit operation");
             return Ok(());
         }

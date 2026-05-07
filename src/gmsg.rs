@@ -17,5 +17,5 @@ pub struct Gmsg {
     pub copy: bool,
     ///Amend the most recent commit
     #[arg(short = 'a', long = "amend")]
-    pub amend: bool,
+    pub amend: Option<Option<String>>,
 }
