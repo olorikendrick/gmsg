@@ -87,6 +87,6 @@ gmsg -a
 
 ---
 
-
+[![Built With Ratatui](https://ratatui.rs/built-with-ratatui/badge.svg)](https://ratatui.rs/)
 ## 🛡 License
 MIT – Build something great.
