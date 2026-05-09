@@ -2,6 +2,15 @@
 name = "gmsg"
 version = "0.1.0"
 edition = "2024"
+license = "MIT"
+license-file = "LICENSE"
+keywords = ["ai", "cli", "git", "commits", "developer-tools"]
+categories = ["command-line-utilities", "development-tools"]
+readme = "README.md"
+homepage = "https://olorikendrick.github.io/gmsg/"
+description = "AI-powered commit message generator with a TUI editor"
+repository = "https://github.com/olorikendrick/gmsg"
+
 
 [dependencies]
 anyhow = "1.0.102"
