@@ -1,6 +1,5 @@
+// main.rs
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    gmsg::run().await?;
-
-    Ok(())
+    gmsg::Gmsg::run().await
 }

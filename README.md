@@ -58,7 +58,7 @@ gmsg | echo
 ```
 
 ### **Amending[Coming Soon]**
-Fix the message of your last commit based on current changes:
+cleFix the message of your last commit based on current changes:
 ```bash
 gmsg -a
 ```

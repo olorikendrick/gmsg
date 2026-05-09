@@ -103,8 +103,6 @@ fn get_staged_files(repository: &Repository) -> anyhow::Result<Option<Vec<String
     }
 }
 
-
-fn add(path:Option<Vec<String>>)->anyhow::Result<()>{
+fn add(path: Option<Vec<String>>) -> anyhow::Result<()> {
     Ok(())
-
 }
