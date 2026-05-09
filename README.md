@@ -1,5 +1,5 @@
 # GMSG
-**AI-powered utility for generating conventional commit messages.**
+**AI-powered utility for generating conventional  Git commit messages.**
 
 `gmsg` is a high-performance CLI tool built in Rust for generating commit messages.It uses AI to analyze your staged diffs and generate messages base on conventional commit specification.
 
@@ -16,11 +16,11 @@
 
 ## 🛠 Installation
 
-*(Ensure you have your approiprate key set in your environment variables)*
+*(Ensure you have your gemini api key set in your environment variables)*
 
 ```bash
-export <Provide_Key>="your_api_key_here"
-cargo install gsmg .
+export GEMINI_API_KEY="your_api_key_here"
+cargo install gmsg .
 ```
 
 Or you can download prebuilt binaries
@@ -57,7 +57,7 @@ gmsg > message.txt
 gmsg | echo
 ```
 
-### **Amending**
+### **Amending[Coming Soon]**
 Fix the message of your last commit based on current changes:
 ```bash
 gmsg -a
