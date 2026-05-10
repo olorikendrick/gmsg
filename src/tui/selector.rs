@@ -1,6 +1,6 @@
 use crate::config::ModelEntry;
 use ratatui::{
-    DefaultTerminal, Frame, crossterm::event::{self, Event, KeyCode}, layout::{Constraint, Layout}, style::{Color, Modifier, Style}, text::{Line, Span}, widgets::{Block, Borders, List, ListItem, ListState}
+    Frame, crossterm::event::{self, Event, KeyCode}, layout::{Constraint, Layout}, style::{Color, Modifier, Style}, text::{Line, Span}, widgets::{Block, Borders, List, ListItem, ListState}
 };
 
 use crate::tui::TerminalGuard;

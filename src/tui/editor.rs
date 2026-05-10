@@ -1,5 +1,5 @@
 use ratatui::{
-    DefaultTerminal, Frame,
+    Frame,
     crossterm::event::{Event, KeyCode, KeyModifiers, read},
 };
 use ratatui_textarea::TextArea;
