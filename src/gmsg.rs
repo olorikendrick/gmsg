@@ -1,5 +1,7 @@
+use crate::ai::GenerateCommitMsg;
 // gmsg.rs
 use crate::config::LoadedConfig;
+use crate::git::get_diff;
 use crate::tui::{editor::Editor, selector::Selector};
 use anyhow::Context;
 use arboard::Clipboard;
@@ -91,18 +93,24 @@ impl Gmsg {
             "Failed to open a git repository. Check if it exists or if you have necessary permissions",
         )?;
 
-        let diff = crate::git::get_diff(&repository)?;
+        let diff_result = get_diff(&repository)?;
 
-        if self.amend {
-            eprintln!("Diff: \n:{}", diff);
-            return Ok(());
-        }
         let agent = crate::ai::build_commit_agent(
             config.config.ai.provider.clone(),
             config.config.ai.model.clone(),
             config.config.ai.prompt.as_deref(),
         )
         .context("Could not bootstrap agent")?;
+
+        if self.amend {
+            Self::make_amends(&repository, diff_result.as_ref(), &agent).await?;
+            return Ok(());
+        }
+        let Some(diff) = diff_result else {
+            eprintln!("No Staged Changes Detected");
+            return Ok(());
+        };
+
         let mut out = Self::strip_backtick(&agent.generate_commit_msg(&diff).await?);
 
         if self.interactive {
@@ -151,5 +159,50 @@ impl Gmsg {
 
     fn strip_backtick(input: &str) -> String {
         input.replace('`', "")
+    }
+
+    async fn make_amends(
+        repository: &Repository,
+        diff: Option<&String>,
+        agent: &Box<dyn GenerateCommitMsg>,
+    ) -> anyhow::Result<()> {
+        let prev_commit = repository
+            .head()
+            .context("Failed to get HEAD")?
+            .peel_to_commit()
+            .context("Failed to peel to commit")?;
+
+        let prev_msg = prev_commit.message().unwrap_or("").to_string();
+
+        let editor_input = match diff {
+            None => prev_msg.clone(),
+            Some(diff) => {
+                agent
+                    .generate_commit_msg(&format!(
+                        "Amend this commit message: {}\n\nWith this new diff:\n{}",
+                        prev_msg, diff
+                    ))
+                    .await?
+            }
+        };
+
+        let mut terminal = ratatui::init();
+        let out = Editor::from(editor_input)
+            .run(&mut terminal)
+            .context("Failed to initialize inline editor")?;
+        ratatui::restore();
+
+        if out.is_empty() {
+            eprintln!("Aborted amend operation");
+            return Ok(());
+        }
+let mut index = repository.index()?;
+index.read(true).context("Failed to read index")?;  // force read from disk
+let tree_oid = index.write_tree()?;
+let tree = repository.find_tree(tree_oid)?;
+
+prev_commit.amend(Some("HEAD"), None, None, None, Some(&out), Some(&tree))?;
+
+        Ok(())
     }
 }

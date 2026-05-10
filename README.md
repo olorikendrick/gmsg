@@ -57,13 +57,18 @@ gmsg > message.txt
 gmsg | echo
 ```
 
-### **Amending[Coming Soon]**
-cleFix the message of your last commit based on current changes:
+### **Amending**
+Fix the message of your last commit based on current changes:
+
+
 ```bash
 gmsg -a
 ```
 
 ---
+
+If you have any staged changes,the diff is sent alongside previous message to the ai.
+else i opens an editor
 
 ## ⚙️ Configuration
 

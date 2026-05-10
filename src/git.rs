@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::{self, Context};
 use git2::{DiffFormat, DiffOptions, Repository, Status, StatusEntry, Tree};
 
-pub fn get_diff(repository: &Repository) -> anyhow::Result<String> {
+pub fn get_diff(repository: &Repository) -> anyhow::Result<Option<String>> {
     if get_staged_files(repository)
         .context("Could not get staged files")?
         .is_some()
@@ -40,9 +40,9 @@ pub fn get_diff(repository: &Repository) -> anyhow::Result<String> {
         if let Some(e) = error {
             return Err(e);
         }
-        Ok(output)
+        Ok(Some(output))
     } else {
-        Ok("No staged files detected".to_string())
+        Ok(None)
     }
 }
 
@@ -73,7 +73,7 @@ pub fn commit(repository: &Repository, message: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn get_staged_files(repository: &Repository) -> anyhow::Result<Option<Vec<String>>> {
+pub fn get_staged_files(repository: &Repository) -> anyhow::Result<Option<Vec<String>>> {
     let filter_staged = |status: &StatusEntry| {
         status.status().intersects(
             Status::INDEX_DELETED
@@ -105,7 +105,7 @@ fn get_staged_files(repository: &Repository) -> anyhow::Result<Option<Vec<String
     }
 }
 
-fn stage_files(paths: &[String], repository: &Repository) -> anyhow::Result<()> {
+pub fn stage_files(paths: &[String], repository: &Repository) -> anyhow::Result<()> {
     if paths.is_empty() {
         return Err(anyhow::anyhow!("No path"));
     }
@@ -117,3 +117,4 @@ fn stage_files(paths: &[String], repository: &Repository) -> anyhow::Result<()> 
     index.write()?;
     Ok(())
 }
+
