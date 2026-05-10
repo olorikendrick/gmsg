@@ -16,7 +16,7 @@
 
 ## 🛠 Installation
 
-*(Ensure you have your gemini api key set in your environment variables)*
+*(Ensure you have your appropriate  api key set in your environment variables)*
 
 ```bash
 export GEMINI_API_KEY="your_api_key_here"
@@ -54,7 +54,7 @@ gmsg -c
 gmsg > message.txt
 
 #Pipe to another utility
-gmsg | echo
+gmsg | grep
 ```
 
 ### **Amending**
@@ -68,11 +68,24 @@ gmsg -a
 ---
 
 If you have any staged changes,the diff is sent alongside previous message to the ai.
-else i opens an editor
+else it opens an editor
 
 ## ⚙️ Configuration
 
 `gmsg` is designed to be zero-config by default, utilizing an embedded `SYSTEM_PROMPT`. 
+
+To configure the provider
+gmsg config.provider
+
+to configure model
+
+gmsg config.model
+
+to configure prompt
+
+gmsg config.prompt
+
+
 
 | Flag | Long | Description |
 | :--- | :--- | :--- |
@@ -83,6 +96,8 @@ else i opens an editor
 
 ---
 
+
+You can always set this in your project .gmsgconfig.toml or your config directoryOMproject level config supereded
 ## 🏗 Architecture
 
 *   **Agent Logic:** Powered by the `rig` crate for LLM orchestration.
