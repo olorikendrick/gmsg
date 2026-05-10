@@ -1,6 +1,9 @@
-[![Crates.io](https://img.shields.io/crates/v/gmsg.svg)](https://crates.io/crates/gmsg)
+[![Crates.io](https://img.shields.io/crates/v/gmsg.svg?color=orange)](https://crates.io/crates/gmsg)
+[![Downloads](https://img.shields.io/crates/d/gmsg.svg)](https://crates.io/crates/gmsg)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Built with Ratatui](https://ratatui.rs/built-with-ratatui/badge.svg)](https://ratatui.rs/)
+[![Built with Rig](https://rig.rs/built-with-rig/badge.svg)](https://rig.rs/)
+[![Rust](https://img.shields.io/badge/rust-1.80%2B-orange.svg)](https://www.rust-lang.org/)
 # GMSG
 **AI-powered utility for generating conventional Git commit messages.**
 
