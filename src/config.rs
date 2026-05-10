@@ -7,6 +7,17 @@ use std::{fs, path::PathBuf, str::FromStr};
 
 use crate::ai::Provider;
 
+
+const SYSTEM_PROMPT: &str = r#"
+You will be given a git diff. Your task is to generate a commit message that describes ONLY the changes shown in the diff hunks (lines beginning with + or -). 
+
+
+Be precise. Describe what changed, not what exists around it and infer intent as much as possible.
+
+For small, focused changes keep the body concise. 
+Only expand into detail when the change is complex or touches multiple systems and verbosity is deemed neccessary.
+You should follow conventional commit specifications 
+"#;
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AiConfig {
     pub provider: Provider,
@@ -19,7 +30,7 @@ impl Default for AiConfig {
         Self {
             provider: Provider::Gemini,
             model: "gemini-2.0-flash-lite".to_string(),
-            prompt: None,
+            prompt: Some(SYSTEM_PROMPT.to_string()),
         }
     }
 }

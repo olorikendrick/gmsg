@@ -1,4 +1,14 @@
 [ai]
 provider = "gemini"
 model = "gemini-2.5-flash"
-prompt = "Write a professional git commit message based on the diff. Do not preface the commit with anything. Use present tense, return the full sentence, and follow the conventional commits specification (<type in lowercase>: <subject>). Only add a body when the change is complex enough to require explanation."
+prompt = """
+
+You will be given a git diff. Your task is to generate a commit message that describes ONLY the changes shown in the diff hunks (lines beginning with + or -). 
+
+
+Be precise. Describe what changed, not what exists around it and infer intent as much as possible.
+
+For small, focused changes keep the body concise. 
+Only expand into detail when the change is complex or touches multiple systems and verbosity is deemed neccessary.
+You should follow conventional commit specifications 
+"""

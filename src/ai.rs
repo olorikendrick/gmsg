@@ -9,15 +9,6 @@ use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 use strum_macros::{Display, EnumString};
 
-const SYSTEM_PROMPT: &str = r#"
-You will be given a git diff. Your task is to generate a commit message that describes ONLY the changes shown in the diff hunks (lines beginning with + or -). 
-
-
-Be precise. Describe what changed, not what exists around it.
-For small, focused changes keep the body concise. 
-Only expand into detail when the change is complex or touches multiple systems and verbosity is deemed neccessary.
-You should follow conventional commit specifications 
-"#;
 
 #[async_trait::async_trait]
 pub trait GenerateCommitMsg {
@@ -39,7 +30,7 @@ pub fn build_commit_agent(
     model: String,
     system_message: Option<&str>,
 ) -> anyhow::Result<Box<dyn GenerateCommitMsg>> {
-    let preamble = system_message.unwrap_or(SYSTEM_PROMPT);
+    let preamble = system_message.unwrap();
 
     let agent: Box<dyn GenerateCommitMsg> = match provider {
         Provider::OpenAI => Box::new(

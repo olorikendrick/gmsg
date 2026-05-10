@@ -1,12 +1,9 @@
 use crate::config::ModelEntry;
 use ratatui::{
-    Frame,
-    crossterm::event::{self, Event, KeyCode},
-    layout::{Constraint, Layout},
-    style::{Color, Modifier, Style},
-    text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState},
+    DefaultTerminal, Frame, crossterm::event::{self, Event, KeyCode}, layout::{Constraint, Layout}, style::{Color, Modifier, Style}, text::{Line, Span}, widgets::{Block, Borders, List, ListItem, ListState}
 };
+
+use crate::tui::TerminalGuard;
 
 pub struct Selector {
     items: Vec<ModelEntry>,
@@ -22,8 +19,9 @@ impl Selector {
 
     pub fn run(
         &mut self,
-        terminal: &mut ratatui::DefaultTerminal,
+        terminal:&mut TerminalGuard,
     ) -> anyhow::Result<Option<String>> {
+        let  terminal=&mut terminal.0;
         loop {
             terminal.draw(|f| self.render(f))?;
 

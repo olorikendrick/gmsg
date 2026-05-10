@@ -2,7 +2,7 @@ use crate::ai::GenerateCommitMsg;
 // gmsg.rs
 use crate::config::LoadedConfig;
 use crate::git::get_diff;
-use crate::tui::{editor::Editor, selector::Selector};
+use crate::tui::{editor::Editor, selector::Selector,TerminalGuard};
 use anyhow::Context;
 use arboard::Clipboard;
 use clap::{Parser, Subcommand};
@@ -10,6 +10,7 @@ use git2::Repository;
 use std::path::PathBuf;
 use std::thread;
 use std::time::Duration;
+
 
 #[derive(Parser)]
 #[command(version, about = "Generate conventional commit messages")]
@@ -59,7 +60,7 @@ impl Gmsg {
         match command {
             Command::ConfigProvider => {
                 let providers = LoadedConfig::list_providers();
-                let mut terminal = ratatui::init();
+                let mut terminal = TerminalGuard::new();
                 if let Some(selected) = Selector::new(providers).run(&mut terminal)? {
                     config.write_provider(selected)?;
                 }
@@ -72,7 +73,7 @@ impl Gmsg {
             }
             Command::ConfigModel => {
                 let models = config.list_models().await?;
-                let mut terminal = ratatui::init();
+                let mut terminal = TerminalGuard::new();
                 if let Some(selected) = Selector::new(models).run(&mut terminal)? {
                     config.write_model(selected)?;
                 }
@@ -114,7 +115,7 @@ impl Gmsg {
         let mut out = Self::strip_backtick(&agent.generate_commit_msg(&diff).await?);
 
         if self.interactive {
-            let mut terminal = ratatui::init();
+            let mut terminal = TerminalGuard::new();
             out = Editor::from(out)
                 .run(&mut terminal)
                 .context("Failed to initialize inline editor")?;
@@ -186,7 +187,7 @@ impl Gmsg {
             }
         };
 
-        let mut terminal = ratatui::init();
+        let mut terminal = TerminalGuard::new();
         let out = Editor::from(editor_input)
             .run(&mut terminal)
             .context("Failed to initialize inline editor")?;

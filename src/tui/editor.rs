@@ -3,6 +3,8 @@ use ratatui::{
     crossterm::event::{Event, KeyCode, KeyModifiers, read},
 };
 use ratatui_textarea::TextArea;
+
+use crate::tui::TerminalGuard;
 #[derive(Default)]
 pub struct Editor<'a> {
     state: State,
@@ -21,7 +23,8 @@ impl<'a> Editor<'a> {
         Self::default()
     }
 
-    pub fn run(&mut self, terminal: &mut DefaultTerminal) -> anyhow::Result<String> {
+    pub fn run(&mut self, guard: &mut TerminalGuard) -> anyhow::Result<String> {
+        let  terminal = &mut guard.0;
         loop {
             terminal.draw(|frame| self.render(frame))?;
 
