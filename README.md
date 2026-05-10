@@ -1,51 +1,59 @@
 # GMSG
-**AI-powered utility for generating conventional  Git commit messages.**
+**AI-powered utility for generating conventional Git commit messages.**
 
-`gmsg` is a high-performance CLI tool built in Rust for generating commit messages.It uses AI to analyze your staged diffs and generate messages base on conventional commit specification.
+`gmsg` is a high-performance CLI tool built in Rust for generating commit messages. It uses AI to analyze your staged diffs and generate messages based on the Conventional Commits specification.
 
 ---
 
 ## 🚀 Features
 
-*   **Spec-Grounded:** Uses the  `Conventional Commits`[](https://www.conventionalcommits.org/en/v1.0.0) specification as a system prompt to ensure total compliance.You can also modify the system prompt to align more with your preffered specifications
-*   **Interactive TUI:** Review and edit generated messages in a `Ratatui`[](https://ratatui.rs/)-powered editor before finalizing.
-* **UNIX Compliant**:Automatically discover closest git repositories in your current folder and TTY/Pipe Aware behavior
-*   **Clipboard & Amend Support:**: Easily copy messages to your clipboard or amend the most recent commit.
-*  **Multi Provider and Model Support**:Built with `Rig`[](https://rig.rs/) providing excellent support for a wide range of LLM providers and models of your choice
+- **Spec-Grounded:** Uses the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0) specification as a system prompt to ensure total compliance. You can also modify the system prompt to align with your preferred specifications.
+- **Interactive TUI:** Review and edit generated messages in a [Ratatui](https://ratatui.rs/)-powered editor before finalizing.
+- **UNIX Compliant:** Automatically discovers the closest git repository in your current folder with TTY/pipe-aware behavior.
+- **Clipboard & Amend Support:** Easily copy messages to your clipboard or amend the most recent commit.
+- **Multi-Provider and Model Support:** Built with [Rig](https://rig.rs/), providing excellent support for a wide range of LLM providers and models of your choice.
+
 ---
 
 ## 🛠 Installation
 
-*(Ensure you have your appropriate  api key set in your environment variables)*
+*Ensure you have your appropriate API key set in your environment variables.*
 
 ```bash
 export GEMINI_API_KEY="your_api_key_here"
-cargo install gmsg .
+cargo install gmsg
 ```
 
-Or you can download prebuilt binaries
+Or download prebuilt binaries.
 
 ---
 
 ## 📖 Usage
 
-### **Standard Workflow**
+### Standard Workflow
+
 Stage your changes and let `gmsg` handle the whole commit process.
+
 ```bash
 git add .
 gmsg
 ```
 
-### **Interactive Review**
-You might want to review and modify generated messages before further action:
+### Interactive Review
+
+Review and modify the generated message before committing:
+
 ```bash
 gmsg -i
 ```
-*   **Ctrl+S**: Save and Continue.
-*   **Ctrl+Q**: Discard and Exit.
 
-### **The "Helper" Mode**
-If you just wish to generate the message 
+- **Ctrl+S:** Save and continue.
+- **Ctrl+Q:** Discard and exit.
+
+### Helper Mode
+
+If you just want to generate the message without committing:
+
 ```bash
 # Copy to clipboard and exit
 gmsg -c
@@ -53,13 +61,13 @@ gmsg -c
 # Output to a file
 gmsg > message.txt
 
-#Pipe to another utility
+# Pipe to another utility
 gmsg | grep
 ```
 
-### **Amending**
-Fix the message of your last commit based on current changes:
+### Amending
 
+Amend the message of your last commit. If you have staged changes, the diff is sent alongside the previous message to the AI. Otherwise, it opens an editor.
 
 ```bash
 gmsg -a
@@ -67,25 +75,16 @@ gmsg -a
 
 ---
 
-If you have any staged changes,the diff is sent alongside previous message to the ai.
-else it opens an editor
-
 ## ⚙️ Configuration
 
-`gmsg` is designed to be zero-config by default, utilizing an embedded `SYSTEM_PROMPT`. 
+`gmsg` is zero-config by default.
+But you can configure it.
 
-To configure the provider
-gmsg config.provider
-
-to configure model
-
-gmsg config.model
-
-to configure prompt
-
-gmsg config.prompt
-
-
+```bash
+gmsg config.provider   # set your LLM provider
+gmsg config.model      # set your model
+gmsg config.prompt <Prompt>    # customize the system prompt
+```
 
 | Flag | Long | Description |
 | :--- | :--- | :--- |
@@ -94,19 +93,21 @@ gmsg config.prompt
 | `-c` | `--copy` | Copies the message to clipboard and exits. |
 | `-a` | `--amend` | Amends the HEAD commit with the new message. |
 
+Configuration can be set in your project's `.gmsgconfig.toml` or your global config directory. Project-level config takes precedence.
+
 ---
 
-
-You can always set this in your project .gmsgconfig.toml or your config directoryOMproject level config supereded
 ## 🏗 Architecture
 
-*   **Agent Logic:** Powered by the `rig` crate for LLM orchestration.
-*   **Git Operations:** Uses `git2-rs` for robust interaction with Git
-*   **Terminal UI:** Built with `ratatui` and `ratatui-textarea` for a smooth editing experience.
-*   **Async Runtime:** Driven by `tokio` for non-blocking AI generation.
+- **Agent Logic:** Powered by the [`rig`](https://rig.rs/) crate for LLM orchestration.
+- **Git Operations:** Uses [`git2-rs`](https://github.com/rust-lang/git2-rs) for robust interaction with Git.
+- **Terminal UI:** Built with [`ratatui`](https://ratatui.rs/) and `ratatui-textarea` for a smooth editing experience.
+- **Async Runtime:** Driven by [`tokio`](https://tokio.rs/) for non-blocking AI generation.
 
 ---
 
 [![Built With Ratatui](https://ratatui.rs/built-with-ratatui/badge.svg)](https://ratatui.rs/)
+
 ## 🛡 License
+
 MIT – Build something great.
