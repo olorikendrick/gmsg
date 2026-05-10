@@ -29,8 +29,7 @@ export GEMINI_API_KEY="your_api_key_here"
 cargo install gmsg
 ```
 
-Or download prebuilt binaries.
-
+Or download a [prebuilt binary](https://github.com/olorikendrick/gmsg/releases/latest) for your platform.
 ---
 
 ## 📖 Usage
