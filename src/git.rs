@@ -1,4 +1,6 @@
-use anyhow::Context;
+use std::path::Path;
+
+use anyhow::{self, Context};
 use git2::{DiffFormat, DiffOptions, Repository, Status, StatusEntry, Tree};
 
 pub fn get_diff(repository: &Repository) -> anyhow::Result<String> {
@@ -103,6 +105,15 @@ fn get_staged_files(repository: &Repository) -> anyhow::Result<Option<Vec<String
     }
 }
 
-fn add(path: Option<Vec<String>>) -> anyhow::Result<()> {
+fn stage_files(paths: &[String], repository: &Repository) -> anyhow::Result<()> {
+    if paths.is_empty() {
+        return Err(anyhow::anyhow!("No path"));
+    }
+    let mut index = repository.index()?;
+    for path in paths {
+        let path = Path::new(&path);
+        index.add_path(path)?;
+    }
+    index.write()?;
     Ok(())
 }

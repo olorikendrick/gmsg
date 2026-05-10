@@ -1,4 +1,4 @@
 [ai]
 provider = "gemini"
 model = "gemini-2.5-flash"
-prompt = "What do you think of this diff"
+prompt = "Write a professional git commit message based on the diff. Do not preface the commit with anything. Use present tense, return the full sentence, and follow the conventional commits specification (<type in lowercase>: <subject>). Only add a body when the change is complex enough to require explanation."

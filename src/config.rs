@@ -2,6 +2,7 @@ use anyhow::Context;
 use rig::client::{ModelListingClient, ProviderClient};
 use rig::providers::{anthropic, gemini, ollama, openai, openrouter};
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 use std::{fs, path::PathBuf, str::FromStr};
 
 use crate::ai::Provider;
@@ -76,7 +77,7 @@ pub struct LoadedConfig {
 }
 
 impl LoadedConfig {
-    pub fn load(repo_root: &PathBuf) -> anyhow::Result<Self> {
+    pub fn load(repo_root: &Path) -> anyhow::Result<Self> {
         let local_path = local_path(repo_root);
         let global = load_global().unwrap_or_default();
         let local = load_partial(&local_path).unwrap_or_default();
@@ -100,8 +101,8 @@ impl LoadedConfig {
         self.save()
     }
 
-    pub fn write_prompt(&mut self,prompt:String)->anyhow::Result<()>{
-        self.config.ai.prompt=Some(prompt);
+    pub fn write_prompt(&mut self, prompt: String) -> anyhow::Result<()> {
+        self.config.ai.prompt = Some(prompt);
         self.save()
     }
 
@@ -191,7 +192,7 @@ fn load_partial(path: &PathBuf) -> Option<PartialConfig> {
     toml::from_str(&contents).ok()
 }
 
-fn local_path(repo_root: &PathBuf) -> PathBuf {
+fn local_path(repo_root: &Path) -> PathBuf {
     repo_root.join(".gmsgconfig.toml")
 }
 
