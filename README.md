@@ -85,6 +85,7 @@ gmsg config.provider   # set your LLM provider
 gmsg config.model      # set your model
 gmsg config.prompt <Prompt>    # customize the system prompt
 ```
+<img width="400" height="225" alt="2026-05-10 17-48-47" src="https://github.com/user-attachments/assets/fe77704f-4b55-4e45-bd03-a894a4706824" />
 
 | Flag | Long | Description |
 | :--- | :--- | :--- |
