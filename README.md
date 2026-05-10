@@ -1,3 +1,6 @@
+[![Crates.io](https://img.shields.io/crates/v/gmsg.svg)](https://crates.io/crates/gmsg)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Built with Ratatui](https://ratatui.rs/built-with-ratatui/badge.svg)](https://ratatui.rs/)
 # GMSG
 **AI-powered utility for generating conventional Git commit messages.**
 
