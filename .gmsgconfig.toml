@@ -1,3 +1,4 @@
 [ai]
 provider = "gemini"
 model = "gemini-2.5-flash"
+prompt = "What do you think of this diff"

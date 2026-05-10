@@ -1,5 +1,4 @@
 // gmsg.rs
-use crate::ai::GenerateCommitMsg;
 use crate::config::LoadedConfig;
 use crate::tui::{editor::Editor, selector::Selector};
 use anyhow::Context;
@@ -22,8 +21,8 @@ pub struct Gmsg {
     #[arg(short = 'c', long = "copy")]
     pub copy: bool,
 
-    #[arg(short = 'a', long = "amend", num_args = 0..=1)]
-    pub amend: Option<String>,
+    #[arg(short = 'a', long = "amend")]
+    pub amend: bool,
 
     #[command(subcommand)]
     pub command: Option<Command>,
@@ -36,6 +35,8 @@ pub enum Command {
 
     #[command(name = "config.models")]
     ConfigModel,
+    #[command(name = "config.prompt")]
+    Prompt { prompt: String },
 }
 
 impl Gmsg {
@@ -60,6 +61,11 @@ impl Gmsg {
                 if let Some(selected) = Selector::new(providers).run(&mut terminal)? {
                     config.write_provider(selected)?;
                 }
+                let models = config.list_models().await?;
+
+                if let Some(selected) = Selector::new(models).run(&mut terminal)? {
+                    config.write_model(selected)?;
+                }
                 ratatui::restore();
             }
             Command::ConfigModel => {
@@ -69,6 +75,9 @@ impl Gmsg {
                     config.write_model(selected)?;
                 }
                 ratatui::restore();
+            }
+            Command::Prompt { prompt } => {
+                config.write_prompt(prompt.to_owned())?;
             }
         }
         Ok(())
@@ -83,6 +92,11 @@ impl Gmsg {
         )?;
 
         let diff = crate::git::get_diff(&repository)?;
+
+        if self.amend {
+            eprintln!("Diff: \n:{}", diff);
+            return Ok(());
+        }
         let agent = crate::ai::build_commit_agent(
             config.config.ai.provider.clone(),
             config.config.ai.model.clone(),
@@ -91,7 +105,7 @@ impl Gmsg {
         .context("Could not bootstrap agent")?;
         let mut out = Self::strip_backtick(&agent.generate_commit_msg(&diff).await?);
 
-        if self.interactive || self.amend.is_some() {
+        if self.interactive {
             let mut terminal = ratatui::init();
             out = Editor::from(out)
                 .run(&mut terminal)

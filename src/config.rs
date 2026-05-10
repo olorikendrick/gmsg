@@ -16,8 +16,8 @@ pub struct AiConfig {
 impl Default for AiConfig {
     fn default() -> Self {
         Self {
-            provider: Provider::OpenAI,
-            model: "gpt-4o".to_string(),
+            provider: Provider::Gemini,
+            model: "gemini-2.0-flash-lite".to_string(),
             prompt: None,
         }
     }
@@ -97,6 +97,11 @@ impl LoadedConfig {
 
     pub fn write_provider(&mut self, provider: String) -> anyhow::Result<()> {
         self.config.ai.provider = Provider::from_str(&provider).context("Invalid provider")?;
+        self.save()
+    }
+
+    pub fn write_prompt(&mut self,prompt:String)->anyhow::Result<()>{
+        self.config.ai.prompt=Some(prompt);
         self.save()
     }
 
