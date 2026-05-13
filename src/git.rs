@@ -117,4 +117,3 @@ pub fn stage_files(paths: &[String], repository: &Repository) -> anyhow::Result<
     index.write()?;
     Ok(())
 }
-

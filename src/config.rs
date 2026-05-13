@@ -7,7 +7,6 @@ use std::{fs, path::PathBuf, str::FromStr};
 
 use crate::ai::Provider;
 
-
 const SYSTEM_PROMPT: &str = r#"
 You will be given a git diff. Your task is to generate a commit message that describes ONLY the changes shown in the diff hunks (lines beginning with + or -). 
 

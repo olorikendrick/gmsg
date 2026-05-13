@@ -1,14 +1,15 @@
+use http::status::StatusCode;
 use rig::{
     agent::{Agent, PromptHook},
     client::{CompletionClient, ProviderClient},
-    completion::{CompletionModel, Prompt},
+    completion::{CompletionError, CompletionModel, Prompt, PromptError},
+    http_client::Error as HttpError,
     providers::{anthropic, cohere, gemini, ollama, openai, openrouter},
 };
 
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 use strum_macros::{Display, EnumString};
-
 
 #[async_trait::async_trait]
 pub trait GenerateCommitMsg {
@@ -84,4 +85,27 @@ pub enum Provider {
     Cohere,
     Ollama,
     OpenRouter,
+}
+
+pub enum AiError {
+    RateExceeded,
+    Other,
+}
+
+impl From<PromptError> for AiError {
+    fn from(error: PromptError) -> Self {
+        match error {
+            PromptError::CompletionError(e) => match e {
+                CompletionError::HttpError(e) => match e {
+                    HttpError::InvalidStatusCode(s) => match s {
+                        StatusCode::TOO_MANY_REQUESTS => AiError::RateExceeded,
+                        _ => AiError::Other,
+                    },
+                    _ => AiError::Other,
+                },
+                _ => AiError::Other,
+            },
+            _ => AiError::Other,
+        }
+    }
 }

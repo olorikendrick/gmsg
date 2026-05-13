@@ -1,6 +1,11 @@
 use crate::config::ModelEntry;
 use ratatui::{
-    Frame, crossterm::event::{self, Event, KeyCode}, layout::{Constraint, Layout}, style::{Color, Modifier, Style}, text::{Line, Span}, widgets::{Block, Borders, List, ListItem, ListState}
+    Frame,
+    crossterm::event::{self, Event, KeyCode},
+    layout::{Constraint, Layout},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+    widgets::{Block, Borders, List, ListItem, ListState},
 };
 
 use crate::tui::TerminalGuard;
@@ -17,11 +22,8 @@ impl Selector {
         Self { items, state }
     }
 
-    pub fn run(
-        &mut self,
-        terminal:&mut TerminalGuard,
-    ) -> anyhow::Result<Option<String>> {
-        let  terminal=&mut terminal.0;
+    pub fn run(&mut self, terminal: &mut TerminalGuard) -> anyhow::Result<Option<String>> {
+        let terminal = &mut terminal.0;
         loop {
             terminal.draw(|f| self.render(f))?;
 

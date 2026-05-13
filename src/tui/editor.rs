@@ -24,7 +24,7 @@ impl<'a> Editor<'a> {
     }
 
     pub fn run(&mut self, guard: &mut TerminalGuard) -> anyhow::Result<String> {
-        let  terminal = &mut guard.0;
+        let terminal = &mut guard.0;
         loop {
             terminal.draw(|frame| self.render(frame))?;
 

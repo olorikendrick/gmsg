@@ -2,7 +2,7 @@ use crate::ai::GenerateCommitMsg;
 // gmsg.rs
 use crate::config::LoadedConfig;
 use crate::git::get_diff;
-use crate::tui::{editor::Editor, selector::Selector,TerminalGuard};
+use crate::tui::{TerminalGuard, editor::Editor, selector::Selector};
 use anyhow::Context;
 use arboard::Clipboard;
 use clap::{Parser, Subcommand};
@@ -10,7 +10,6 @@ use git2::Repository;
 use std::path::PathBuf;
 use std::thread;
 use std::time::Duration;
-
 
 #[derive(Parser)]
 #[command(version, about = "Generate conventional commit messages")]
@@ -197,12 +196,12 @@ impl Gmsg {
             eprintln!("Aborted amend operation");
             return Ok(());
         }
-let mut index = repository.index()?;
-index.read(true).context("Failed to read index")?;  // force read from disk
-let tree_oid = index.write_tree()?;
-let tree = repository.find_tree(tree_oid)?;
+        let mut index = repository.index()?;
+        index.read(true).context("Failed to read index")?; // force read from disk
+        let tree_oid = index.write_tree()?;
+        let tree = repository.find_tree(tree_oid)?;
 
-prev_commit.amend(Some("HEAD"), None, None, None, Some(&out), Some(&tree))?;
+        prev_commit.amend(Some("HEAD"), None, None, None, Some(&out), Some(&tree))?;
 
         Ok(())
     }
