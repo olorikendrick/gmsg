@@ -7,6 +7,7 @@ use anyhow::Context;
 use arboard::Clipboard;
 use clap::{Parser, Subcommand};
 use git2::Repository;
+use std::io::IsTerminal;
 use std::path::PathBuf;
 use std::thread;
 use std::time::Duration;
@@ -39,6 +40,9 @@ pub enum Command {
     ConfigModel,
     #[command(name = "config.prompt")]
     Prompt { prompt: String },
+
+    #[command(name = "config.show")]
+    ConfigShow,
 }
 
 impl Gmsg {
@@ -81,38 +85,26 @@ impl Gmsg {
             Command::Prompt { prompt } => {
                 config.write_prompt(prompt.to_owned())?;
             }
+            Command::ConfigShow => {}
         }
         Ok(())
     }
 
-    async fn handle_commit(&self) -> anyhow::Result<()> {
-        let wdir = self.working_dir()?;
-        let config = LoadedConfig::load(&wdir)?;
+    async fn dispatch(
+        &self,
+        repository: &Repository,
+        diff: Option<String>,
+         agent: Box<dyn GenerateCommitMsg>,
+    ) -> anyhow::Result<()> {
+        let action = GmsgAction::from(self);
+        
 
-        let repository = Repository::discover(&wdir).context(
-            "Failed to open a git repository. Check if it exists or if you have necessary permissions",
-        )?;
-
-        let diff_result = get_diff(&repository)?;
-
-        let agent = crate::ai::build_commit_agent(
-            config.config.ai.provider.clone(),
-            config.config.ai.model.clone(),
-            config.config.ai.prompt.as_deref(),
-        )
-        .context("Could not bootstrap agent")?;
-
-        if self.amend {
-            Self::make_amends(&repository, diff_result.as_ref(), &agent).await?;
+        if let GmsgAction::Amend = action {
+            Self::make_amends(repository, diff.as_ref(), &agent).await?;
             return Ok(());
         }
-        let Some(diff) = diff_result else {
-            eprintln!("No Staged Changes Detected");
-            return Ok(());
-        };
-
+        let diff = diff.expect("diff should not be none at this point");
         let mut out = Self::strip_backtick(&agent.generate_commit_msg(&diff).await?);
-
         if self.interactive {
             let mut terminal = TerminalGuard::new();
             out = Editor::from(out)
@@ -126,25 +118,54 @@ impl Gmsg {
             }
         }
 
-        if !std::io::IsTerminal::is_terminal(&std::io::stdout()) {
-            println!("{}", out);
-            return Ok(());
+        match action {
+            GmsgAction::Amend => {
+                unreachable!("This arm should never execute")
+            }
+            GmsgAction::Copy => {
+                let mut clipboard = Clipboard::new().context("Failed to get system clipboard")?;
+                clipboard
+                    .set_text(&out)
+                    .context("Failed to set clipboard")?;
+                thread::sleep(Duration::from_secs(2));
+                eprintln!("Copied to clipboard: {}", out);
+                return Ok(());
+            }
+            GmsgAction::Pipe => {
+                println!("{}", out);
+                return Ok(());
+            }
+            GmsgAction::Commit => match crate::git::commit(repository, &out) {
+                Ok(_) => eprintln!("Committed with message:\n{}", out),
+                Err(e) => eprintln!("Error while committing: {:?}", e),
+            },
         }
 
-        if self.copy {
-            let mut clipboard = Clipboard::new().context("Failed to get system clipboard")?;
-            clipboard
-                .set_text(&out)
-                .context("Failed to set clipboard")?;
-            thread::sleep(Duration::from_secs(2));
-            eprintln!("Copied to clipboard: {}", out);
+        Ok(())
+    }
+
+    async fn handle_commit(&self) -> anyhow::Result<()> {
+        let wdir = self.working_dir()?;
+        let config = LoadedConfig::load(&wdir)?;
+
+        let repository = Repository::discover(&wdir).context(
+            "Failed to open a git repository. Check if it exists or if you have necessary permissions",
+        )?;
+
+        let diff = get_diff(&repository)?;
+
+        if !self.amend && diff.is_none() {
+            eprintln!("No Staged change detected");
+
             return Ok(());
         }
-
-        match crate::git::commit(&repository, &out) {
-            Ok(_) => eprintln!("Committed with message:\n{}", out),
-            Err(e) => eprintln!("Error while committing: {:?}", e),
-        }
+        let agent = crate::ai::build_commit_agent(
+            config.config.ai.provider.clone(),
+            config.config.ai.model.clone(),
+            config.config.ai.prompt.as_deref(),
+        )
+        .context("Could not bootstrap agent")?;
+        self.dispatch(&repository, diff, agent).await?;
 
         Ok(())
     }
@@ -204,5 +225,28 @@ impl Gmsg {
         prev_commit.amend(Some("HEAD"), None, None, None, Some(&out), Some(&tree))?;
 
         Ok(())
+    }
+}
+#[derive(Debug)]
+enum GmsgAction {
+    Amend,
+    Copy,
+    Commit,
+    Pipe,
+}
+
+impl From<&Gmsg> for GmsgAction {
+    fn from(cli: &Gmsg) -> Self {
+        if cli.amend {
+            Self::Amend
+        } else if cli.copy {
+            Self::Copy
+        } else {
+            let stdout = std::io::stdout();
+            if !stdout.is_terminal() {
+                return Self::Pipe;
+            }
+            Self::Commit
+        }
     }
 }
