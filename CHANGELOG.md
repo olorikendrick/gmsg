@@ -3,6 +3,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-05-15
+
+### Fixed
+- Panic when running `gmsg` in a fresh repository with no commits
+- Config not being loaded from disk due to incorrect path resolution in `load_local`
+- `RateExceeded` error now surfaces the provider's error message
+
 ## [0.1.1] - 2026-05-10
 
 ### Added
