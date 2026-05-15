@@ -1,4 +1,0 @@
-No path supplied ,using current directory ,"/home/kendrick/gmsg"
-[src/git.rs:19:13] status.path() = Some(
-    "src/errors.rs",
-)

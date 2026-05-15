@@ -134,7 +134,12 @@ mod test {
 
         let dir = directory.path();
         let repository = Repository::init(&dir).context("Could not initialize repository")?;
-        let file = "Test file";
+   
+         let mut config = repository.config()?;
+    config.set_str("user.name", "test")?;
+    config.set_str("user.email", "test@test.com")?;
+
+         let file = "Test file";
         fs::write(dir.join("test.txt"), file)?;
 
         Ok((repository, directory))
