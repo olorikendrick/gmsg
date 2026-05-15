@@ -51,10 +51,7 @@ pub fn commit(repository: &Repository, message: &str) -> anyhow::Result<()> {
         .signature()
         .context("Could not read repository Signature")?;
     let parent = match repository.head() {
-        Ok(head) => match head.peel_to_commit() {
-            Ok(parents) => Some(parents),
-            Err(_) => None,
-        },
+        Ok(head) => head.peel_to_commit().ok(),
         Err(_) => None,
     };
     let mut index = repository.index().context("Could not get index")?;

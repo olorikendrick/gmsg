@@ -32,7 +32,6 @@ pub fn build_commit_agent(
     system_message: Option<&str>,
 ) -> Result<Box<dyn GenerateCommitMsg>, AiError> {
     let preamble = system_message.unwrap();
-    
 
     let agent: Box<dyn GenerateCommitMsg> = match provider {
         Provider::OpenAI => Box::new(
@@ -72,6 +71,7 @@ pub fn build_commit_agent(
                 .build(),
         ),
     };
+  
 
     Ok(agent)
 }
@@ -92,8 +92,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum AiError {
-    #[error("Rate limit exceeded")]
-    RateExceeded,
+    #[error("Rate limit exceeded {0}")]
+    RateExceeded(String),
     #[error("Provider  does not provide model ")]
     NotFound,
     #[error("Provider client error: {0}")]
@@ -107,7 +107,7 @@ impl From<PromptError> for AiError {
             PromptError::CompletionError(e) => match e {
                 CompletionError::HttpError(e) => match e {
                     HttpError::InvalidStatusCode(s) => match s {
-                        StatusCode::TOO_MANY_REQUESTS => AiError::RateExceeded,
+                        StatusCode::TOO_MANY_REQUESTS => AiError::RateExceeded(e.to_string()),
                         StatusCode::NOT_FOUND => AiError::NotFound,
                         _ => {
                             dbg!(&s, s.as_u16());
@@ -115,7 +115,7 @@ impl From<PromptError> for AiError {
                         }
                     },
                     HttpError::InvalidStatusCodeWithMessage(code, msg) => match code.as_u16() {
-                        429 => AiError::RateExceeded,
+                        429 => AiError::RateExceeded(msg.to_string()),
                         404 => AiError::NotFound,
                         _ => AiError::Other(format!("{code}: {msg}")),
                     },
