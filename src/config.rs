@@ -17,6 +17,11 @@ For small, focused changes keep the body concise.
 Only expand into detail when the change is complex or touches multiple systems and verbosity is deemed neccessary.
 You should follow conventional commit specifications 
 "#;
+
+trait Merge {
+    fn merge(&mut self, other: Self);
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AiConfig {
     pub provider: Provider,
@@ -34,90 +39,61 @@ impl Default for AiConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug)]
-pub struct Config {
-    pub ai: AiConfig,
-}
-
-impl Config {
-    fn merge(self, local: PartialConfig) -> Self {
-        Self {
-            ai: AiConfig {
-                provider: local
-                    .ai
-                    .as_ref()
-                    .and_then(|a| a.provider.clone())
-                    .unwrap_or(self.ai.provider),
-                model: local
-                    .ai
-                    .as_ref()
-                    .and_then(|a| a.model.clone())
-                    .filter(|m| !m.is_empty())
-                    .unwrap_or(self.ai.model),
-                prompt: local
-                    .ai
-                    .as_ref()
-                    .and_then(|a| a.prompt.clone())
-                    .or(self.ai.prompt),
-            },
+impl Merge for AiConfig {
+    fn merge(&mut self, other: Self) {
+        self.model = other.model;
+        self.provider = other.provider;
+        if let Some(prompt) = other.prompt {
+            self.prompt = Some(prompt);
         }
     }
 }
 
-#[derive(Deserialize, Default, Debug)]
-struct PartialConfig {
-    ai: Option<PartialAiConfig>,
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
+pub struct Config {
+    pub ai: AiConfig,
+    #[serde(skip)]
+    local: PathBuf,
 }
 
-#[derive(Deserialize, Debug)]
-struct PartialAiConfig {
-    provider: Option<Provider>,
-    model: Option<String>,
-    prompt: Option<String>,
-}
-#[derive(Debug)]
-pub struct ModelEntry {
-    pub display: String,
-    pub id: String,
-}
-#[derive(Debug)]
-pub struct LoadedConfig {
-    pub config: Config,
-    local_path: PathBuf,
+impl Merge for Config {
+    fn merge(&mut self, other: Self) {
+        self.ai.merge(other.ai);
+    }
 }
 
-impl LoadedConfig {
-    pub fn load(repo_root: &Path) -> anyhow::Result<Self> {
-        let local_path = local_path(repo_root);
-        let global = load_global().unwrap_or_default();
-        let local = load_partial(&local_path).unwrap_or_default();
-        let merged = global.merge(local);
+impl Config {
+    pub fn load(path: &Path) -> anyhow::Result<Self> {
+        let mut config = Self::default();
 
-        let loaded = Self {
-            config: merged,
-            local_path,
-        };
-        loaded.save()?;
-        Ok(loaded)
+        if let Some(global) = Self::load_global() {
+            config.merge(global);
+        }
+        if let Some(local) = Self::load_local(path) {
+            config.merge(local);
+        }
+        config.local = path.join(".gmsgconfig.toml");
+        config.save()?;
+        Ok(config)
     }
 
     pub fn write_model(&mut self, model: String) -> anyhow::Result<()> {
-        self.config.ai.model = model;
+        self.ai.model = model;
         self.save()
     }
 
     pub fn write_provider(&mut self, provider: String) -> anyhow::Result<()> {
-        self.config.ai.provider = Provider::from_str(&provider).context("Invalid provider")?;
+        self.ai.provider = Provider::from_str(&provider).context("Invalid provider")?;
         self.save()
     }
 
     pub fn write_prompt(&mut self, prompt: String) -> anyhow::Result<()> {
-        self.config.ai.prompt = Some(prompt);
+        self.ai.prompt = Some(prompt);
         self.save()
     }
 
     pub async fn list_models(&self) -> anyhow::Result<Vec<ModelEntry>> {
-        let entries = match self.config.ai.provider {
+        let entries = match self.ai.provider {
             Provider::OpenAI => openai::Client::from_env()?
                 .list_models()
                 .await?
@@ -181,31 +157,34 @@ impl LoadedConfig {
     }
 
     fn save(&self) -> anyhow::Result<()> {
-        if let Some(parent) = self.local_path.parent() {
+        if let Some(parent) = self.local.parent() {
             fs::create_dir_all(parent)?;
         }
-        let contents =
-            toml::to_string_pretty(&self.config).context("Could not serialize config")?;
-        fs::write(&self.local_path, &contents)
-            .with_context(|| format!("Could not write config to {:?}", self.local_path))
+        let contents = toml::to_string_pretty(&self).context("Could not serialize config")?;
+        fs::write(&self.local, &contents)
+            .with_context(|| format!("Could not write config to {:?}", self.local))
     }
-}
 
-fn load_global() -> Option<Config> {
-    let path = global_path()?;
-    let contents = fs::read_to_string(&path).ok()?;
-    toml::from_str(&contents).ok()
-}
+    fn load_global() -> Option<Config> {
+        let path = global_path()?;
+        let contents = fs::read_to_string(&path).ok()?;
+        toml::from_str(&contents).ok()
+    }
 
-fn load_partial(path: &PathBuf) -> Option<PartialConfig> {
-    let contents = fs::read_to_string(path).ok()?;
-    toml::from_str(&contents).ok()
-}
-
-fn local_path(repo_root: &Path) -> PathBuf {
-    repo_root.join(".gmsgconfig.toml")
+    fn load_local(path: &Path) -> Option<Config> {
+        let local = path.join(".gmsgconfig.toml");
+        let contents = fs::read_to_string(&local).ok()?;
+        let mut config: Config = toml::from_str(&contents).ok()?;
+        config.local = local;
+        Some(config)
+    }
 }
 
 fn global_path() -> Option<PathBuf> {
     directories::ProjectDirs::from("", "", "gmsg").map(|dirs| dirs.config_dir().join("config.toml"))
+}
+
+pub struct ModelEntry {
+    pub display: String,
+    pub id: String,
 }

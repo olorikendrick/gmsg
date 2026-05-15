@@ -1,6 +1,5 @@
 use crate::ai::GenerateCommitMsg;
 // gmsg.rs
-use crate::config::LoadedConfig;
 use crate::git::get_diff;
 use crate::tui::{TerminalGuard, editor::Editor, selector::Selector};
 use anyhow::Context;
@@ -11,6 +10,7 @@ use std::io::IsTerminal;
 use std::path::PathBuf;
 use std::thread;
 use std::time::Duration;
+use crate::config::Config;
 
 #[derive(Parser)]
 #[command(version, about = "Generate conventional commit messages")]
@@ -58,11 +58,13 @@ impl Gmsg {
 
     async fn handle_command(&self, command: &Command) -> anyhow::Result<()> {
         let wdir = self.working_dir()?;
-        let mut config = LoadedConfig::load(&wdir)?;
+        dbg!(&wdir);
+        let mut config = Config::load(&wdir)?;
+        
 
         match command {
             Command::ConfigProvider => {
-                let providers = LoadedConfig::list_providers();
+                let providers = Config::list_providers();
                 let mut terminal = TerminalGuard::new();
                 if let Some(selected) = Selector::new(providers).run(&mut terminal)? {
                     config.write_provider(selected)?;
@@ -94,10 +96,9 @@ impl Gmsg {
         &self,
         repository: &Repository,
         diff: Option<String>,
-         agent: Box<dyn GenerateCommitMsg>,
+        agent: Box<dyn GenerateCommitMsg>,
     ) -> anyhow::Result<()> {
         let action = GmsgAction::from(self);
-        
 
         if let GmsgAction::Amend = action {
             Self::make_amends(repository, diff.as_ref(), &agent).await?;
@@ -146,8 +147,8 @@ impl Gmsg {
 
     async fn handle_commit(&self) -> anyhow::Result<()> {
         let wdir = self.working_dir()?;
-        let config = LoadedConfig::load(&wdir)?;
-
+        let config = Config::load(&wdir)?;
+        dbg!(&config);
         let repository = Repository::discover(&wdir).context(
             "Failed to open a git repository. Check if it exists or if you have necessary permissions",
         )?;
@@ -160,9 +161,9 @@ impl Gmsg {
             return Ok(());
         }
         let agent = crate::ai::build_commit_agent(
-            config.config.ai.provider.clone(),
-            config.config.ai.model.clone(),
-            config.config.ai.prompt.as_deref(),
+            config.ai.provider.clone(),
+            config.ai.model.clone(),
+            config.ai.prompt.as_deref(),
         )
         .context("Could not bootstrap agent")?;
         self.dispatch(&repository, diff, agent).await?;
