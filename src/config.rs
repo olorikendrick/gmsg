@@ -17,7 +17,7 @@ For small, focused changes keep the body concise.
 Only expand into detail when the change is complex or touches multiple systems and verbosity is deemed neccessary.
 You should follow conventional commit specifications 
 "#;
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AiConfig {
     pub provider: Provider,
     pub model: String,
@@ -34,7 +34,7 @@ impl Default for AiConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct Config {
     pub ai: AiConfig,
 }
@@ -64,23 +64,23 @@ impl Config {
     }
 }
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize, Default, Debug)]
 struct PartialConfig {
     ai: Option<PartialAiConfig>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct PartialAiConfig {
     provider: Option<Provider>,
     model: Option<String>,
     prompt: Option<String>,
 }
-
+#[derive(Debug)]
 pub struct ModelEntry {
     pub display: String,
     pub id: String,
 }
-
+#[derive(Debug)]
 pub struct LoadedConfig {
     pub config: Config,
     local_path: PathBuf,

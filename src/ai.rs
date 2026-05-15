@@ -1,7 +1,7 @@
 use http::status::StatusCode;
 use rig::{
     agent::{Agent, PromptHook},
-    client::{CompletionClient, ProviderClient},
+    client::{CompletionClient, ProviderClient, ProviderClientError},
     completion::{CompletionError, CompletionModel, Prompt, PromptError},
     http_client::Error as HttpError,
     providers::{anthropic, cohere, gemini, ollama, openai, openrouter},
@@ -13,7 +13,7 @@ use strum_macros::{Display, EnumString};
 
 #[async_trait::async_trait]
 pub trait GenerateCommitMsg {
-    async fn generate_commit_msg(&self, diff: &str) -> anyhow::Result<String>;
+    async fn generate_commit_msg(&self, diff: &str) -> Result<String, AiError>;
 }
 
 #[async_trait::async_trait]
@@ -22,7 +22,7 @@ where
     M: CompletionModel + 'static,
     P: PromptHook<M> + 'static,
 {
-    async fn generate_commit_msg(&self, diff: &str) -> anyhow::Result<String> {
+    async fn generate_commit_msg(&self, diff: &str) -> Result<String, AiError> {
         Ok(self.prompt(diff).await?)
     }
 }
@@ -30,8 +30,9 @@ pub fn build_commit_agent(
     provider: Provider,
     model: String,
     system_message: Option<&str>,
-) -> anyhow::Result<Box<dyn GenerateCommitMsg>> {
+) -> Result<Box<dyn GenerateCommitMsg>, AiError> {
     let preamble = system_message.unwrap();
+    
 
     let agent: Box<dyn GenerateCommitMsg> = match provider {
         Provider::OpenAI => Box::new(
@@ -87,11 +88,19 @@ pub enum Provider {
     OpenRouter,
 }
 
-pub enum AiError {
-    RateExceeded,
-    Other,
-}
+use thiserror::Error;
 
+#[derive(Debug, Error)]
+pub enum AiError {
+    #[error("Rate limit exceeded")]
+    RateExceeded,
+    #[error("Provider  does not provide model ")]
+    NotFound,
+    #[error("Provider client error: {0}")]
+    ProviderError(String),
+    #[error("Unknown error: {0}")]
+    Other(String),
+}
 impl From<PromptError> for AiError {
     fn from(error: PromptError) -> Self {
         match error {
@@ -99,13 +108,31 @@ impl From<PromptError> for AiError {
                 CompletionError::HttpError(e) => match e {
                     HttpError::InvalidStatusCode(s) => match s {
                         StatusCode::TOO_MANY_REQUESTS => AiError::RateExceeded,
-                        _ => AiError::Other,
+                        StatusCode::NOT_FOUND => AiError::NotFound,
+                        _ => {
+                            dbg!(&s, s.as_u16());
+                            AiError::Other(e.to_string())
+                        }
                     },
-                    _ => AiError::Other,
+                    HttpError::InvalidStatusCodeWithMessage(code, msg) => match code.as_u16() {
+                        429 => AiError::RateExceeded,
+                        404 => AiError::NotFound,
+                        _ => AiError::Other(format!("{code}: {msg}")),
+                    },
+                    _ => {
+                        dbg!(&e);
+                        AiError::Other(e.to_string())
+                    }
                 },
-                _ => AiError::Other,
+                _ => AiError::Other(e.to_string()),
             },
-            _ => AiError::Other,
+            _ => AiError::Other(error.to_string()),
         }
+    }
+}
+
+impl From<ProviderClientError> for AiError {
+    fn from(e: ProviderClientError) -> Self {
+        AiError::ProviderError(e.to_string())
     }
 }
