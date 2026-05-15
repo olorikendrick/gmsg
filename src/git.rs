@@ -50,15 +50,20 @@ pub fn commit(repository: &Repository, message: &str) -> anyhow::Result<()> {
     let signature = repository
         .signature()
         .context("Could not read repository Signature")?;
-    let head = repository.head().context("Could not get repository head")?;
+    let parent = match repository.head() {
+        Ok(head) => match head.peel_to_commit() {
+            Ok(parents) => Some(parents),
+            Err(_) => None,
+        },
+        Err(_) => None,
+    };
     let mut index = repository.index().context("Could not get index")?;
     let tree_id = index.write_tree().context("Could not get tree of head")?;
     let tree = repository
         .find_tree(tree_id)
         .context("Could not find tree")?;
-    let parents = head
-        .peel_to_commit()
-        .context("Could not get Parent of last commit")?;
+
+    let parents_slice: Vec<&git2::Commit> = parent.iter().collect();
     repository
         .commit(
             Some("HEAD"),
@@ -66,7 +71,7 @@ pub fn commit(repository: &Repository, message: &str) -> anyhow::Result<()> {
             &signature,
             message,
             &tree,
-            &[&parents],
+            &parents_slice,
         )
         .context("Could not make commit")?;
 
@@ -119,13 +124,51 @@ pub fn stage_files(paths: &[String], repository: &Repository) -> anyhow::Result<
 }
 #[cfg(test)]
 mod test {
+    use crate::git::{commit, get_diff, stage_files};
+    use anyhow::{Context, Result};
+    use git2::Repository;
+    use std::fs;
+    use std::path::Path;
+    use std::path::PathBuf;
+    use tempfile::{TempDir, tempdir};
+
+    fn setup() -> Result<(Repository, TempDir)> {
+        let directory = tempfile::tempdir()?;
+
+        let dir = directory.path();
+        let repository = Repository::init(&dir).context("Could not initialize repository")?;
+        let file = "Test file";
+        fs::write(dir.join("test.txt"), file)?;
+
+        Ok((repository, directory))
+    }
+    #[test]
+    fn test_stage_files_works() -> Result<()> {
+        let (repository, dir) = setup()?;
+        let result = stage_files(&vec!["test.txt".to_string()], &repository);
+        assert!(result.is_ok());
+        let diff = get_diff(&repository).context("Could not get diff")?;
+
+        assert!(diff.is_some());
+
+        Ok(())
+    }
 
     #[test]
-    fn test_commit_on_empty_repo_works() -> anyhow::Result<()> {
-        use std::path::PathBuf;
-        use tempdiles::tempdir;
+    fn test_commit_on_empty_repo_works() -> Result<()> {
+        let (repository, dir) = setup()?;
+        stage_files(&vec!["test.txt".to_string()], &repository)?;
+        let diff = get_diff(&repository).context("Could not get diff")?;
 
-        let dir: PathBuf = tempdir()?;
+        assert!(diff.is_some());
+
+        let result = commit(&repository, "First commit");
+        let diff = get_diff(&repository).context("Could not get diff")?;
+
+        assert!(diff.is_none());
+
+        assert!(result.is_ok());
+        let _ = dir.path();
 
         Ok(())
     }
