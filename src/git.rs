@@ -117,3 +117,16 @@ pub fn stage_files(paths: &[String], repository: &Repository) -> anyhow::Result<
     index.write()?;
     Ok(())
 }
+#[cfg(test)]
+mod test {
+
+    #[test]
+    fn test_commit_on_empty_repo_works() -> anyhow::Result<()> {
+        use std::path::PathBuf;
+        use tempdiles::tempdir;
+
+        let dir: PathBuf = tempdir()?;
+
+        Ok(())
+    }
+}
