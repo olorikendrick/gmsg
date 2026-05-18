@@ -15,15 +15,16 @@ use std::time::Duration;
 #[derive(Parser)]
 #[command(version, about = "Generate conventional commit messages")]
 pub struct Gmsg {
+    /// Path to repository
     #[arg(short, long, value_name = "PATH")]
     pub path: Option<PathBuf>,
-
+    /// Edit commits in an editor
     #[arg(short = 'i', long = "interactive")]
     pub interactive: bool,
-
+    /// Copy generated to clipboard and exit
     #[arg(short = 'c', long = "copy")]
     pub copy: bool,
-
+    /// Amend previous commit
     #[arg(short = 'a', long = "amend")]
     pub amend: bool,
 
@@ -33,14 +34,16 @@ pub struct Gmsg {
 
 #[derive(Subcommand)]
 pub enum Command {
+    /// Select AI provider and model
     #[command(name = "config.provider")]
     ConfigProvider,
-
+    ///Select AI model from provider
     #[command(name = "config.models")]
     ConfigModel,
+    /// Pass in a custom prompt for the model
     #[command(name = "config.prompt")]
     Prompt { prompt: String },
-
+    ///print config
     #[command(name = "config.show")]
     ConfigShow,
 }
@@ -65,16 +68,18 @@ impl Gmsg {
                 let providers = Config::list_providers();
                 let mut terminal = TerminalGuard::new();
                 if let Some(selected) = Selector::new(providers).run(&mut terminal)? {
-                    config.write_provider(selected)?;
-                }
-                let models = config.list_models().await?;
+                    config.write_provider(selected.clone())?;
 
-                if let Some(selected) = Selector::new(models).run(&mut terminal)? {
-                    config.write_model(selected)?;
+                    let models = Config::list_models(config.ai.provider.clone()).await?;
+
+                    if let Some(selected) = Selector::new(models).run(&mut terminal)? {
+                        config.write_model(selected)?;
+                    }
                 }
             }
             Command::ConfigModel => {
-                let models = config.list_models().await?;
+                let provider = config.ai.provider.clone();
+                let models = Config::list_models(provider).await?;
                 let mut terminal = TerminalGuard::new();
                 if let Some(selected) = Selector::new(models).run(&mut terminal)? {
                     config.write_model(selected)?;

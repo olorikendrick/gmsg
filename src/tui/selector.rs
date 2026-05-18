@@ -1,4 +1,4 @@
-use crate::config::ModelEntry;
+use crate::ai::ModelEntry;
 use ratatui::{
     Frame,
     crossterm::event::{self, Event, KeyCode},

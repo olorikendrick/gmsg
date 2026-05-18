@@ -1,11 +1,8 @@
+use crate::ai::{ModelEntry, Provider, build_model_listing_client};
 use anyhow::Context;
-use rig::client::{ModelListingClient, ProviderClient};
-use rig::providers::{anthropic, gemini, ollama, openai, openrouter};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::{fs, path::PathBuf, str::FromStr};
-
-use crate::ai::Provider;
 
 const SYSTEM_PROMPT: &str = r#"
 You will be given a git diff. Your task is to generate a commit message that describes ONLY the changes shown in the diff hunks (lines beginning with + or -). 
@@ -92,58 +89,9 @@ impl Config {
         self.save()
     }
 
-    pub async fn list_models(&self) -> anyhow::Result<Vec<ModelEntry>> {
-        let entries = match self.ai.provider {
-            Provider::OpenAI => openai::Client::from_env()?
-                .list_models()
-                .await?
-                .into_iter()
-                .map(|m| ModelEntry {
-                    display: format!("{} ({})", m.display_name(), m.id),
-                    id: m.id.to_string(),
-                })
-                .collect(),
-            Provider::Anthropic => anthropic::Client::from_env()?
-                .list_models()
-                .await?
-                .into_iter()
-                .map(|m| ModelEntry {
-                    display: format!("{} ({})", m.display_name(), m.id),
-                    id: m.id.to_string(),
-                })
-                .collect(),
-            Provider::Gemini => gemini::Client::from_env()?
-                .list_models()
-                .await?
-                .into_iter()
-                .map(|m| ModelEntry {
-                    display: format!("{} ({})", m.display_name(), m.id),
-                    id: m.id.to_string(),
-                })
-                .collect(),
-            Provider::Ollama => ollama::Client::from_env()?
-                .list_models()
-                .await?
-                .into_iter()
-                .map(|m| ModelEntry {
-                    display: format!("{} ({})", m.display_name(), m.id),
-                    id: m.id.to_string(),
-                })
-                .collect(),
-            Provider::OpenRouter => openrouter::Client::from_env()?
-                .list_models()
-                .await?
-                .into_iter()
-                .map(|m| ModelEntry {
-                    display: format!("{} ({})", m.display_name(), m.id),
-                    id: m.id.to_string(),
-                })
-                .collect(),
-            _ => {
-                return Err(anyhow::anyhow!("Listing is not enabled for this provider"));
-            }
-        };
-        Ok(entries)
+    pub async fn list_models(provider: Provider) -> anyhow::Result<Vec<ModelEntry>> {
+        let client = build_model_listing_client(provider)?;
+        client.list_models().await
     }
 
     pub fn list_providers() -> Vec<ModelEntry> {
@@ -182,9 +130,4 @@ impl Config {
 
 fn global_path() -> Option<PathBuf> {
     directories::ProjectDirs::from("", "", "gmsg").map(|dirs| dirs.config_dir().join("config.toml"))
-}
-
-pub struct ModelEntry {
-    pub display: String,
-    pub id: String,
 }

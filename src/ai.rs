@@ -1,7 +1,7 @@
 use http::status::StatusCode;
 use rig::{
     agent::{Agent, PromptHook},
-    client::{CompletionClient, ProviderClient, ProviderClientError},
+    client::{CompletionClient, ModelListingClient, ProviderClient, ProviderClientError},
     completion::{CompletionError, CompletionModel, Prompt, PromptError},
     http_client::Error as HttpError,
     providers::{anthropic, cohere, gemini, ollama, openai, openrouter},
@@ -10,6 +10,10 @@ use rig::{
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 use strum_macros::{Display, EnumString};
+pub struct ModelEntry {
+    pub display: String,
+    pub id: String,
+}
 
 #[async_trait::async_trait]
 pub trait GenerateCommitMsg {
@@ -75,6 +79,23 @@ pub fn build_commit_agent(
     Ok(agent)
 }
 
+pub fn build_model_listing_client(provider: Provider) -> Result<Box<dyn ListModels>, AiError> {
+    let client: Box<dyn ListModels> = match provider {
+        Provider::OpenAI => Box::new(openai::Client::from_env()?),
+        Provider::Gemini => Box::new(gemini::Client::from_env()?),
+        Provider::Anthropic => Box::new(anthropic::Client::from_env()?),
+        Provider::Ollama => Box::new(ollama::Client::from_env()?),
+        Provider::OpenRouter => Box::new(openrouter::Client::from_env()?),
+        Provider::Cohere => {
+            return Err(AiError::Other(
+                "Cohere does not support model listing".to_string(),
+            ));
+        }
+    };
+
+    Ok(client)
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, EnumString, Display, EnumIter)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
@@ -133,5 +154,27 @@ impl From<PromptError> for AiError {
 impl From<ProviderClientError> for AiError {
     fn from(e: ProviderClientError) -> Self {
         AiError::ProviderError(e.to_string())
+    }
+}
+
+#[async_trait::async_trait]
+pub trait ListModels: Send + Sync {
+    async fn list_models(&self) -> anyhow::Result<Vec<ModelEntry>>;
+}
+
+#[async_trait::async_trait]
+impl<T> ListModels for T
+where
+    T: ModelListingClient + Send + Sync,
+{
+    async fn list_models(&self) -> anyhow::Result<Vec<ModelEntry>> {
+        Ok(ModelListingClient::list_models(self)
+            .await?
+            .into_iter()
+            .map(|m| ModelEntry {
+                display: format!("{} ({})", m.display_name(), m.id),
+                id: m.id.to_string(),
+            })
+            .collect())
     }
 }

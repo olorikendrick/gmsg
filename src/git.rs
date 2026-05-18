@@ -126,15 +126,13 @@ mod test {
     use anyhow::{Context, Result};
     use git2::Repository;
     use std::fs;
-    use std::path::Path;
-    use std::path::PathBuf;
-    use tempfile::{TempDir, tempdir};
+    use tempfile::TempDir;
 
     fn setup() -> Result<(Repository, TempDir)> {
         let directory = tempfile::tempdir()?;
 
         let dir = directory.path();
-        let repository = Repository::init(&dir).context("Could not initialize repository")?;
+        let repository = Repository::init(dir).context("Could not initialize repository")?;
 
         let mut config = repository.config()?;
         config.set_str("user.name", "test")?;
@@ -147,8 +145,8 @@ mod test {
     }
     #[test]
     fn test_stage_files_works() -> Result<()> {
-        let (repository, dir) = setup()?;
-        let result = stage_files(&vec!["test.txt".to_string()], &repository);
+        let (repository, _dir) = setup()?;
+        let result = stage_files(&["test.txt".to_string()], &repository);
         assert!(result.is_ok());
         let diff = get_diff(&repository).context("Could not get diff")?;
 
@@ -160,7 +158,7 @@ mod test {
     #[test]
     fn test_commit_on_empty_repo_works() -> Result<()> {
         let (repository, dir) = setup()?;
-        stage_files(&vec!["test.txt".to_string()], &repository)?;
+        stage_files(&["test.txt".to_string()], &repository)?;
         let diff = get_diff(&repository).context("Could not get diff")?;
 
         assert!(diff.is_some());
@@ -178,9 +176,9 @@ mod test {
 
     #[test]
     fn test_get_staged_files_with_staged_files() -> Result<()> {
-        let (repository, directory) = setup()?;
+        let (repository, _directory) = setup()?;
         let file = "test.txt".to_string();
-        stage_files(&vec![file.clone()], &repository)?;
+        stage_files(std::slice::from_ref(&file), &repository)?;
         let result = get_staged_files(&repository)?;
         assert!(result.is_some());
         let files = result.unwrap();
@@ -190,7 +188,7 @@ mod test {
     }
     #[test]
     fn test_get_staged_files_with_no_staged_files() -> Result<()> {
-        let (repository, directory) = setup()?;
+        let (repository, _directory) = setup()?;
 
         let files = get_staged_files(&repository)?;
         assert!(files.is_none());
