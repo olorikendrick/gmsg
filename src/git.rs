@@ -121,6 +121,7 @@ pub fn stage_files(paths: &[String], repository: &Repository) -> anyhow::Result<
 }
 #[cfg(test)]
 mod test {
+    use crate::git::get_staged_files;
     use crate::git::{commit, get_diff, stage_files};
     use anyhow::{Context, Result};
     use git2::Repository;
@@ -134,12 +135,12 @@ mod test {
 
         let dir = directory.path();
         let repository = Repository::init(&dir).context("Could not initialize repository")?;
-   
-         let mut config = repository.config()?;
-    config.set_str("user.name", "test")?;
-    config.set_str("user.email", "test@test.com")?;
 
-         let file = "Test file";
+        let mut config = repository.config()?;
+        config.set_str("user.name", "test")?;
+        config.set_str("user.email", "test@test.com")?;
+
+        let file = "Test file";
         fs::write(dir.join("test.txt"), file)?;
 
         Ok((repository, directory))
@@ -171,6 +172,28 @@ mod test {
 
         assert!(result.is_ok());
         let _ = dir.path();
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_staged_files_with_staged_files() -> Result<()> {
+        let (repository, directory) = setup()?;
+        let file = "test.txt".to_string();
+        stage_files(&vec![file.clone()], &repository)?;
+        let result = get_staged_files(&repository)?;
+        assert!(result.is_some());
+        let files = result.unwrap();
+        assert_eq!(file, files[0]);
+
+        Ok(())
+    }
+    #[test]
+    fn test_get_staged_files_with_no_staged_files() -> Result<()> {
+        let (repository, directory) = setup()?;
+
+        let files = get_staged_files(&repository)?;
+        assert!(files.is_none());
 
         Ok(())
     }
