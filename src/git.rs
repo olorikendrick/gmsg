@@ -124,25 +124,10 @@ mod test {
     use crate::git::get_staged_files;
     use crate::git::{commit, get_diff, stage_files};
     use anyhow::{Context, Result};
-    use git2::Repository;
-    use std::fs;
-    use tempfile::TempDir;
+    
+    use crate::test_utils::setup;
+    
 
-    fn setup() -> Result<(Repository, TempDir)> {
-        let directory = tempfile::tempdir()?;
-
-        let dir = directory.path();
-        let repository = Repository::init(dir).context("Could not initialize repository")?;
-
-        let mut config = repository.config()?;
-        config.set_str("user.name", "test")?;
-        config.set_str("user.email", "test@test.com")?;
-
-        let file = "Test file";
-        fs::write(dir.join("test.txt"), file)?;
-
-        Ok((repository, directory))
-    }
     #[test]
     fn test_stage_files_works() -> Result<()> {
         let (repository, _dir) = setup()?;
@@ -196,3 +181,4 @@ mod test {
         Ok(())
     }
 }
+

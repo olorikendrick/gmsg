@@ -7,3 +7,5 @@ pub mod gmsg;
 pub mod tui;
 
 pub use gmsg::Gmsg;
+#[cfg(test)]
+pub mod test_utils;

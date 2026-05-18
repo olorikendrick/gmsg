@@ -1,6 +1,6 @@
 [ai]
-provider = "openrouter"
-model = "qwen/qwen3.5-plus-20260420"
+provider = "gemini"
+model = "gemini-2.5-flash"
 prompt = """
 
 You will be given a git diff. Your task is to generate a commit message that describes ONLY the changes shown in the diff hunks (lines beginning with + or -). 

@@ -178,3 +178,58 @@ where
             .collect())
     }
 }
+
+
+
+
+const MOCK_RESPONSE:&str ="feat: add file test.txt";
+
+pub struct MockAi {
+    pub response: String,
+}
+
+impl Default for MockAi {
+    fn default() -> Self {
+        Self {
+            response: MOCK_RESPONSE.to_string(),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl GenerateCommitMsg for MockAi {
+    async fn generate_commit_msg(&self, _diff: &str) -> Result<String, AiError> {
+        Ok(self.response.clone())
+    }
+}
+
+#[async_trait::async_trait]
+impl ListModels for MockAi {
+    async fn list_models(&self) -> anyhow::Result<Vec<ModelEntry>> {
+        Ok(vec![ModelEntry {
+            display: "mock-model (mock-1)".to_string(),
+            id: "mock-1".to_string(),
+        }])
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils::setup;
+    use crate::git::stage_files;
+
+    #[tokio::test]
+    async fn test_commit_msg_gen() -> anyhow::Result<()> {
+        let (repository, _dir) = setup()?;
+        stage_files(&["test.txt".to_string()], &repository)?;
+        
+        let diff = crate::git::get_diff(&repository)?.expect("diff should exist");
+        let agent = MockAi::default();
+        let msg = agent.generate_commit_msg(&diff).await?;
+        
+        assert_eq!(msg, MOCK_RESPONSE);
+        Ok(())
+    }
+}
