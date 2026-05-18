@@ -71,7 +71,6 @@ pub fn build_commit_agent(
                 .build(),
         ),
     };
-  
 
     Ok(agent)
 }

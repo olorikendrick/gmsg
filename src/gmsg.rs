@@ -1,5 +1,6 @@
 use crate::ai::GenerateCommitMsg;
 // gmsg.rs
+use crate::config::Config;
 use crate::git::get_diff;
 use crate::tui::{TerminalGuard, editor::Editor, selector::Selector};
 use anyhow::Context;
@@ -10,7 +11,6 @@ use std::io::IsTerminal;
 use std::path::PathBuf;
 use std::thread;
 use std::time::Duration;
-use crate::config::Config;
 
 #[derive(Parser)]
 #[command(version, about = "Generate conventional commit messages")]
@@ -60,7 +60,6 @@ impl Gmsg {
         let wdir = self.working_dir()?;
         dbg!(&wdir);
         let mut config = Config::load(&wdir)?;
-        
 
         match command {
             Command::ConfigProvider => {
@@ -96,12 +95,12 @@ impl Gmsg {
         &self,
         repository: &Repository,
         diff: Option<String>,
-        agent: Box<dyn GenerateCommitMsg>,
+        agent: &dyn GenerateCommitMsg,
     ) -> anyhow::Result<()> {
         let action = GmsgAction::from(self);
 
         if let GmsgAction::Amend = action {
-            Self::make_amends(repository, diff.as_ref(), &agent).await?;
+            Self::make_amends(repository, diff.as_ref(), agent).await?;
             return Ok(());
         }
         let diff = diff.expect("diff should not be none at this point");
@@ -166,7 +165,7 @@ impl Gmsg {
             config.ai.prompt.as_deref(),
         )
         .context("Could not bootstrap agent")?;
-        self.dispatch(&repository, diff, agent).await?;
+        self.dispatch(&repository, diff, agent.as_ref()).await?;
 
         Ok(())
     }
@@ -186,7 +185,7 @@ impl Gmsg {
     async fn make_amends(
         repository: &Repository,
         diff: Option<&String>,
-        agent: &Box<dyn GenerateCommitMsg>,
+        agent: &dyn GenerateCommitMsg,
     ) -> anyhow::Result<()> {
         let prev_commit = repository
             .head()
