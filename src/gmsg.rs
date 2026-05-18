@@ -1,9 +1,9 @@
 use crate::ai::GenerateCommitMsg;
 // gmsg.rs
 use crate::config::Config;
-use crate::git::get_diff;
+use crate::git::{commit, get_diff};
 use crate::tui::{TerminalGuard, editor::Editor, selector::Selector};
-use anyhow::Context;
+use anyhow::{Context, Result};
 use arboard::Clipboard;
 use clap::{Parser, Subcommand};
 use git2::Repository;
@@ -48,19 +48,18 @@ pub enum Command {
 impl Gmsg {
     pub async fn run() -> anyhow::Result<()> {
         let cli = Self::parse();
+        let wdir = cli.working_dir()?;
 
-        if let Some(command) = &cli.command {
-            return cli.handle_command(command).await;
-        }
-
-        cli.handle_commit().await
-    }
-
-    async fn handle_command(&self, command: &Command) -> anyhow::Result<()> {
-        let wdir = self.working_dir()?;
-        dbg!(&wdir);
         let mut config = Config::load(&wdir)?;
 
+        if let Some(command) = &cli.command {
+            return cli.handle_command(command, &mut config).await;
+        }
+
+        cli.handle_commit(&config, wdir).await
+    }
+
+    async fn handle_command(&self, command: &Command, config: &mut Config) -> anyhow::Result<()> {
         match command {
             Command::ConfigProvider => {
                 let providers = Config::list_providers();
@@ -73,7 +72,6 @@ impl Gmsg {
                 if let Some(selected) = Selector::new(models).run(&mut terminal)? {
                     config.write_model(selected)?;
                 }
-                ratatui::restore();
             }
             Command::ConfigModel => {
                 let models = config.list_models().await?;
@@ -81,7 +79,6 @@ impl Gmsg {
                 if let Some(selected) = Selector::new(models).run(&mut terminal)? {
                     config.write_model(selected)?;
                 }
-                ratatui::restore();
             }
             Command::Prompt { prompt } => {
                 config.write_prompt(prompt.to_owned())?;
@@ -91,63 +88,7 @@ impl Gmsg {
         Ok(())
     }
 
-    async fn dispatch(
-        &self,
-        repository: &Repository,
-        diff: Option<String>,
-        agent: &dyn GenerateCommitMsg,
-    ) -> anyhow::Result<()> {
-        let action = GmsgAction::from(self);
-
-        if let GmsgAction::Amend = action {
-            Self::make_amends(repository, diff.as_ref(), agent).await?;
-            return Ok(());
-        }
-        let diff = diff.expect("diff should not be none at this point");
-        let mut out = Self::strip_backtick(&agent.generate_commit_msg(&diff).await?);
-        if self.interactive {
-            let mut terminal = TerminalGuard::new();
-            out = Editor::from(out)
-                .run(&mut terminal)
-                .context("Failed to initialize inline editor")?;
-            ratatui::restore();
-
-            if out.is_empty() {
-                eprintln!("Aborted commit operation");
-                return Ok(());
-            }
-        }
-
-        match action {
-            GmsgAction::Amend => {
-                unreachable!("This arm should never execute")
-            }
-            GmsgAction::Copy => {
-                let mut clipboard = Clipboard::new().context("Failed to get system clipboard")?;
-                clipboard
-                    .set_text(&out)
-                    .context("Failed to set clipboard")?;
-                thread::sleep(Duration::from_secs(2));
-                eprintln!("Copied to clipboard: {}", out);
-                return Ok(());
-            }
-            GmsgAction::Pipe => {
-                println!("{}", out);
-                return Ok(());
-            }
-            GmsgAction::Commit => match crate::git::commit(repository, &out) {
-                Ok(_) => eprintln!("Committed with message:\n{}", out),
-                Err(e) => eprintln!("Error while committing: {:?}", e),
-            },
-        }
-
-        Ok(())
-    }
-
-    async fn handle_commit(&self) -> anyhow::Result<()> {
-        let wdir = self.working_dir()?;
-        let config = Config::load(&wdir)?;
-        dbg!(&config);
+    async fn handle_commit(&self, config: &Config, wdir: PathBuf) -> anyhow::Result<()> {
         let repository = Repository::discover(&wdir).context(
             "Failed to open a git repository. Check if it exists or if you have necessary permissions",
         )?;
@@ -159,14 +100,45 @@ impl Gmsg {
 
             return Ok(());
         }
+
         let agent = crate::ai::build_commit_agent(
             config.ai.provider.clone(),
             config.ai.model.clone(),
             config.ai.prompt.as_deref(),
         )
         .context("Could not bootstrap agent")?;
+        if self.amend {
+            Self::make_amends(&repository, diff, agent.as_ref()).await?;
+            return Ok(());
+        }
+        let diff = diff.expect("Diff should not be none");
         self.dispatch(&repository, diff, agent.as_ref()).await?;
 
+        Ok(())
+    }
+
+    async fn dispatch(
+        &self,
+        repository: &Repository,
+        diff: String,
+        agent: &dyn GenerateCommitMsg,
+    ) -> anyhow::Result<()> {
+        let mut msg = Self::strip_backtick(&agent.generate_commit_msg(&diff).await?);
+
+        if self.interactive {
+            let mut terminal = TerminalGuard::new();
+            msg = Editor::from(msg)
+                .run(&mut terminal)
+                .context("Failed to initialize inline editor")?;
+
+            if msg.is_empty() {
+                eprintln!("Aborted commit operation");
+                return Ok(());
+            }
+        }
+        let action = OutputAction::new(self, msg);
+
+        action.execute(repository)?;
         Ok(())
     }
 
@@ -184,7 +156,7 @@ impl Gmsg {
 
     async fn make_amends(
         repository: &Repository,
-        diff: Option<&String>,
+        diff: Option<String>,
         agent: &dyn GenerateCommitMsg,
     ) -> anyhow::Result<()> {
         let prev_commit = repository
@@ -211,7 +183,6 @@ impl Gmsg {
         let out = Editor::from(editor_input)
             .run(&mut terminal)
             .context("Failed to initialize inline editor")?;
-        ratatui::restore();
 
         if out.is_empty() {
             eprintln!("Aborted amend operation");
@@ -228,25 +199,43 @@ impl Gmsg {
     }
 }
 #[derive(Debug)]
-enum GmsgAction {
-    Amend,
-    Copy,
-    Commit,
-    Pipe,
+enum OutputAction {
+    Copy(String),
+    Commit(String),
+    Pipe(String),
 }
 
-impl From<&Gmsg> for GmsgAction {
-    fn from(cli: &Gmsg) -> Self {
-        if cli.amend {
-            Self::Amend
-        } else if cli.copy {
-            Self::Copy
+impl OutputAction {
+    fn execute(self, repository: &Repository) -> Result<()> {
+        match self {
+            OutputAction::Copy(msg) => {
+                let mut clipboard = Clipboard::new().context("Failed to get system clipboard")?;
+                clipboard
+                    .set_text(&msg)
+                    .context("Failed to set clipboard")?;
+                thread::sleep(Duration::from_secs(2));
+                eprintln!("Copied to clipboard: {}", &msg);
+            }
+            OutputAction::Commit(msg) => match commit(repository, &msg) {
+                Ok(_) => eprintln!("Committed with message:\n{}", msg),
+                Err(e) => eprintln!("Error while committing: {:?}", e),
+            },
+            OutputAction::Pipe(msg) => {
+                println!("{}", msg);
+            }
+        };
+        Ok(())
+    }
+
+    fn new(cli: &Gmsg, msg: String) -> Self {
+        if cli.copy {
+            Self::Copy(msg)
         } else {
             let stdout = std::io::stdout();
             if !stdout.is_terminal() {
-                return Self::Pipe;
+                return Self::Pipe(msg);
             }
-            Self::Commit
+            Self::Commit(msg)
         }
     }
 }
