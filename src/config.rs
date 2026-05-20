@@ -131,3 +131,95 @@ impl Config {
 fn global_path() -> Option<PathBuf> {
     directories::ProjectDirs::from("", "", "gmsg").map(|dirs| dirs.config_dir().join("config.toml"))
 }
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_merge_prompt_not_overwritten_when_none() {
+        let mut base = AiConfig::default();
+        base.prompt = Some("original prompt".to_string());
+
+        let other = AiConfig {
+            provider: Provider::Anthropic,
+            model: "claude-3".to_string(),
+            prompt: None,
+        };
+
+        base.merge(other);
+
+        assert_eq!(base.prompt, Some("original prompt".to_string()));
+        assert_eq!(base.model, "claude-3");
+    }
+
+    #[test]
+    fn test_merge_prompt_overwritten_when_some() {
+        let mut base = AiConfig::default();
+        
+        let other = AiConfig {
+            provider: Provider::Anthropic,
+            model: "claude-3".to_string(),
+            prompt: Some("new prompt".to_string()),
+        };
+
+        base.merge(other);
+
+        assert_eq!(base.prompt, Some("new prompt".to_string()));
+    }
+
+    #[test]
+    fn test_load_defaults_when_no_config_exists() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let config = Config::load(dir.path())?;
+
+        assert_eq!(config.ai.model, "gemini-2.0-flash-lite");
+        assert!(matches!(config.ai.provider, Provider::Gemini));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_write_provider_invalid_string_returns_error() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let mut config = Config::load(dir.path())?;
+
+        let result = config.write_provider("not_a_provider".to_string());
+        assert!(result.is_err());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_local_config_overrides_default() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        
+        let local_config = AiConfig {
+            provider: Provider::Anthropic,
+            model: "claude-3-haiku".to_string(),
+            prompt: None,
+        };
+        let contents = toml::to_string_pretty(&Config {
+            ai: local_config,
+            local: PathBuf::new(),
+        })?;
+        fs::write(dir.path().join(".gmsgconfig.toml"), contents)?;
+
+        let config = Config::load(dir.path())?;
+
+        assert_eq!(config.ai.model, "claude-3-haiku");
+        assert!(matches!(config.ai.provider, Provider::Anthropic));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_list_providers_contains_all_variants() {
+        use strum::IntoEnumIterator;
+        let providers = Config::list_providers();
+        let expected_count = Provider::iter().count();
+        assert_eq!(providers.len(), expected_count);
+    }
+}
