@@ -74,6 +74,7 @@ pub fn build_commit_agent(
                 .preamble(preamble)
                 .build(),
         ),
+        Provider::MockAi => Box::new(MockAi::default()),
     };
 
     Ok(agent)
@@ -86,6 +87,8 @@ pub fn build_model_listing_client(provider: Provider) -> Result<Box<dyn ListMode
         Provider::Anthropic => Box::new(anthropic::Client::from_env()?),
         Provider::Ollama => Box::new(ollama::Client::from_env()?),
         Provider::OpenRouter => Box::new(openrouter::Client::from_env()?),
+
+        Provider::MockAi => Box::new(MockAi::default()),
         Provider::Cohere => {
             return Err(AiError::Other(
                 "Cohere does not support model listing".to_string(),
@@ -106,6 +109,7 @@ pub enum Provider {
     Cohere,
     Ollama,
     OpenRouter,
+    MockAi,
 }
 
 use thiserror::Error;
@@ -179,10 +183,7 @@ where
     }
 }
 
-
-
-
-const MOCK_RESPONSE:&str ="feat: add file test.txt";
+pub const MOCK_RESPONSE: &str = "feat: add file test.txt";
 
 pub struct MockAi {
     pub response: String,
@@ -213,22 +214,21 @@ impl ListModels for MockAi {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::setup;
     use crate::git::stage_files;
+    use crate::test_utils::setup;
 
     #[tokio::test]
     async fn test_commit_msg_gen() -> anyhow::Result<()> {
         let (repository, _dir) = setup()?;
         stage_files(&["test.txt".to_string()], &repository)?;
-        
+
         let diff = crate::git::get_diff(&repository)?.expect("diff should exist");
         let agent = MockAi::default();
         let msg = agent.generate_commit_msg(&diff).await?;
-        
+
         assert_eq!(msg, MOCK_RESPONSE);
         Ok(())
     }

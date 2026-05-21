@@ -132,11 +132,10 @@ fn global_path() -> Option<PathBuf> {
     directories::ProjectDirs::from("", "", "gmsg").map(|dirs| dirs.config_dir().join("config.toml"))
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::setup;
 
     #[test]
     fn test_merge_prompt_not_overwritten_when_none() {
@@ -158,7 +157,7 @@ mod tests {
     #[test]
     fn test_merge_prompt_overwritten_when_some() {
         let mut base = AiConfig::default();
-        
+
         let other = AiConfig {
             provider: Provider::Anthropic,
             model: "claude-3".to_string(),
@@ -195,7 +194,7 @@ mod tests {
     #[test]
     fn test_local_config_overrides_default() -> anyhow::Result<()> {
         let dir = tempfile::tempdir()?;
-        
+
         let local_config = AiConfig {
             provider: Provider::Anthropic,
             model: "claude-3-haiku".to_string(),
@@ -212,6 +211,18 @@ mod tests {
         assert_eq!(config.ai.model, "claude-3-haiku");
         assert!(matches!(config.ai.provider, Provider::Anthropic));
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_local_config_is_loaded() -> anyhow::Result<()> {
+        let (_, directory) = setup()?;
+        let path = directory.path();
+        let config = Config::load_local(&path).unwrap();
+        let expected = "[ai]\n provider = \"mockai\"\n model = \"mock-1\"\n prompt=\"hey\"";
+        let received = fs::read_to_string(path.join(".gmsgconfig.toml"))?;
+
+        assert_eq!(received, expected);
         Ok(())
     }
 

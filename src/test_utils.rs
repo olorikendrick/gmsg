@@ -13,6 +13,10 @@ pub fn setup() -> Result<(Repository, TempDir)> {
     config.set_str("user.email", "test@test.com")?;
 
     fs::write(dir.join("test.txt"), "Test file")?;
+    fs::write(
+        dir.join(".gmsgconfig.toml"),
+        "[ai]\n provider = \"mockai\"\n model = \"mock-1\"\n prompt=\"hey\"",
+    )?;
 
     Ok((repository, directory))
 }

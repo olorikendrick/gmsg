@@ -124,9 +124,8 @@ mod test {
     use crate::git::get_staged_files;
     use crate::git::{commit, get_diff, stage_files};
     use anyhow::{Context, Result};
-    
+
     use crate::test_utils::setup;
-    
 
     #[test]
     fn test_stage_files_works() -> Result<()> {
@@ -181,4 +180,3 @@ mod test {
         Ok(())
     }
 }
-

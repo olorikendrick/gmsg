@@ -9,8 +9,6 @@ use clap::{Parser, Subcommand};
 use git2::Repository;
 use std::io::IsTerminal;
 use std::path::PathBuf;
-use std::thread;
-use std::time::Duration;
 
 #[derive(Parser)]
 #[command(version, about = "Generate conventional commit messages")]
@@ -54,7 +52,7 @@ impl Gmsg {
         let wdir = cli.working_dir()?;
 
         let mut config = Config::load(&wdir)?;
-
+        eprintln!("{:?}", &config);
         if let Some(command) = &cli.command {
             return cli.handle_command(command, &mut config).await;
         }
@@ -218,7 +216,7 @@ impl OutputAction {
                 clipboard
                     .set_text(&msg)
                     .context("Failed to set clipboard")?;
-                thread::sleep(Duration::from_secs(2));
+                std::thread::sleep(std::time::Duration::from_secs(3));
                 eprintln!("Copied to clipboard: {}", &msg);
             }
             OutputAction::Commit(msg) => match commit(repository, &msg) {
@@ -242,5 +240,41 @@ impl OutputAction {
             }
             Self::Commit(msg)
         }
+    }
+}
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::ai::{MOCK_RESPONSE, build_commit_agent};
+    use crate::config::Config;
+    use crate::git::stage_files;
+    use crate::test_utils::*;
+    use arboard::Clipboard;
+    use anyhow::Result;
+    #[tokio::test]
+    async fn test_c_flag_works() -> Result<()> {
+        let (repo, dir) = setup()?;
+        let path = dir.path();
+        stage_files(&["test.txt".to_string()], &repo)?;
+        let gmsg = Gmsg {
+            path: Some(path.to_path_buf()),
+            interactive: false,
+            amend: false,
+            copy: true,
+            command: None,
+        };
+        let wdir = gmsg.working_dir()?;
+        let mut config = Config::load(&wdir)?;
+      
+        gmsg.handle_commit(&config, wdir).await?;
+                std::thread::sleep(std::time::Duration::from_secs(5));
+
+        let  mut clipboard=Clipboard::new()?;
+        let received=clipboard.get_text()?;
+
+
+        assert_eq!(MOCK_RESPONSE,received);
+
+        Ok(())
     }
 }
