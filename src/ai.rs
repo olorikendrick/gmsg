@@ -6,19 +6,53 @@ use rig::{
     http_client::Error as HttpError,
     providers::{anthropic, cohere, gemini, ollama, openai, openrouter},
 };
-
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 use strum_macros::{Display, EnumString};
+use thiserror::Error;
+
+
+#[derive(Debug, Clone, Deserialize, Serialize, EnumString, Display, EnumIter)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
+pub enum Provider {
+    OpenAI,
+    Gemini,
+    Anthropic,
+    Cohere,
+    Ollama,
+    OpenRouter,
+    MockAi,
+}
+
+#[derive(Debug, Error)]
+pub enum AiError {
+    #[error("Rate limit exceeded {0}")]
+    RateExceeded(String),
+    #[error("Provider does not provide model")]
+    NotFound,
+    #[error("Provider client error: {0}")]
+    ProviderError(String),
+    #[error("Unknown error: {0}")]
+    Other(String),
+}
+
 pub struct ModelEntry {
     pub display: String,
     pub id: String,
 }
 
+
 #[async_trait::async_trait]
 pub trait GenerateCommitMsg {
     async fn generate_commit_msg(&self, diff: &str) -> Result<String, AiError>;
 }
+
+#[async_trait::async_trait]
+pub trait ListModels: Send + Sync {
+    async fn list_models(&self) -> anyhow::Result<Vec<ModelEntry>>;
+}
+
 
 #[async_trait::async_trait]
 impl<M, P> GenerateCommitMsg for Agent<M, P>
@@ -30,6 +64,61 @@ where
         Ok(self.prompt(diff).await?)
     }
 }
+
+#[async_trait::async_trait]
+impl<T> ListModels for T
+where
+    T: ModelListingClient + Send + Sync,
+{
+    async fn list_models(&self) -> anyhow::Result<Vec<ModelEntry>> {
+        Ok(ModelListingClient::list_models(self)
+            .await?
+            .into_iter()
+            .map(|m| ModelEntry {
+                display: format!("{} ({})", m.display_name(), m.id),
+                id: m.id.to_string(),
+            })
+            .collect())
+    }
+}
+
+impl From<PromptError> for AiError {
+    fn from(error: PromptError) -> Self {
+        match error {
+            PromptError::CompletionError(e) => match e {
+                CompletionError::HttpError(e) => match e {
+                    HttpError::InvalidStatusCode(s) => match s {
+                        StatusCode::TOO_MANY_REQUESTS => AiError::RateExceeded(e.to_string()),
+                        StatusCode::NOT_FOUND => AiError::NotFound,
+                        _ => {
+                            dbg!(&s, s.as_u16());
+                            AiError::Other(e.to_string())
+                        }
+                    },
+                    HttpError::InvalidStatusCodeWithMessage(code, msg) => match code.as_u16() {
+                        429 => AiError::RateExceeded(msg.to_string()),
+                        404 => AiError::NotFound,
+                        _ => AiError::Other(format!("{code}: {msg}")),
+                    },
+                    _ => {
+                        dbg!(&e);
+                        AiError::Other(e.to_string())
+                    }
+                },
+                _ => AiError::Other(e.to_string()),
+            },
+            _ => AiError::Other(error.to_string()),
+        }
+    }
+}
+
+impl From<ProviderClientError> for AiError {
+    fn from(e: ProviderClientError) -> Self {
+        AiError::ProviderError(e.to_string())
+    }
+}
+
+
 pub fn build_commit_agent(
     provider: Provider,
     model: String,
@@ -87,7 +176,6 @@ pub fn build_model_listing_client(provider: Provider) -> Result<Box<dyn ListMode
         Provider::Anthropic => Box::new(anthropic::Client::from_env()?),
         Provider::Ollama => Box::new(ollama::Client::from_env()?),
         Provider::OpenRouter => Box::new(openrouter::Client::from_env()?),
-
         Provider::MockAi => Box::new(MockAi::default()),
         Provider::Cohere => {
             return Err(AiError::Other(
@@ -99,89 +187,6 @@ pub fn build_model_listing_client(provider: Provider) -> Result<Box<dyn ListMode
     Ok(client)
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, EnumString, Display, EnumIter)]
-#[serde(rename_all = "lowercase")]
-#[strum(serialize_all = "lowercase")]
-pub enum Provider {
-    OpenAI,
-    Gemini,
-    Anthropic,
-    Cohere,
-    Ollama,
-    OpenRouter,
-    MockAi,
-}
-
-use thiserror::Error;
-
-#[derive(Debug, Error)]
-pub enum AiError {
-    #[error("Rate limit exceeded {0}")]
-    RateExceeded(String),
-    #[error("Provider  does not provide model ")]
-    NotFound,
-    #[error("Provider client error: {0}")]
-    ProviderError(String),
-    #[error("Unknown error: {0}")]
-    Other(String),
-}
-impl From<PromptError> for AiError {
-    fn from(error: PromptError) -> Self {
-        match error {
-            PromptError::CompletionError(e) => match e {
-                CompletionError::HttpError(e) => match e {
-                    HttpError::InvalidStatusCode(s) => match s {
-                        StatusCode::TOO_MANY_REQUESTS => AiError::RateExceeded(e.to_string()),
-                        StatusCode::NOT_FOUND => AiError::NotFound,
-                        _ => {
-                            dbg!(&s, s.as_u16());
-                            AiError::Other(e.to_string())
-                        }
-                    },
-                    HttpError::InvalidStatusCodeWithMessage(code, msg) => match code.as_u16() {
-                        429 => AiError::RateExceeded(msg.to_string()),
-                        404 => AiError::NotFound,
-                        _ => AiError::Other(format!("{code}: {msg}")),
-                    },
-                    _ => {
-                        dbg!(&e);
-                        AiError::Other(e.to_string())
-                    }
-                },
-                _ => AiError::Other(e.to_string()),
-            },
-            _ => AiError::Other(error.to_string()),
-        }
-    }
-}
-
-impl From<ProviderClientError> for AiError {
-    fn from(e: ProviderClientError) -> Self {
-        AiError::ProviderError(e.to_string())
-    }
-}
-
-#[async_trait::async_trait]
-pub trait ListModels: Send + Sync {
-    async fn list_models(&self) -> anyhow::Result<Vec<ModelEntry>>;
-}
-
-#[async_trait::async_trait]
-impl<T> ListModels for T
-where
-    T: ModelListingClient + Send + Sync,
-{
-    async fn list_models(&self) -> anyhow::Result<Vec<ModelEntry>> {
-        Ok(ModelListingClient::list_models(self)
-            .await?
-            .into_iter()
-            .map(|m| ModelEntry {
-                display: format!("{} ({})", m.display_name(), m.id),
-                id: m.id.to_string(),
-            })
-            .collect())
-    }
-}
 
 pub const MOCK_RESPONSE: &str = "feat: add file test.txt";
 
@@ -214,14 +219,16 @@ impl ListModels for MockAi {
     }
 }
 
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::git::stage_files;
     use crate::test_utils::setup;
+    use anyhow::Result;
 
     #[tokio::test]
-    async fn test_commit_msg_gen() -> anyhow::Result<()> {
+    async fn test_commit_msg_gen() -> Result<()> {
         let (repository, _dir) = setup()?;
         stage_files(&["test.txt".to_string()], &repository)?;
 
