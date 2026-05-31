@@ -1,8 +1,26 @@
 # Changelog
-All notable changes to this project will be documented in this file.
+## [0.1.3] - 2026-05-31
+### Added
+- `MockAi` provider for deterministic, offline testing without real API calls
 
-## [Unreleased]
+### Changed
+- Model listing abstracted behind a `ListModels` trait for improved testability
+- Output handling centralized via `OutputAction`, with message attached directly to each variant
+- `build_commit_agent` now uses a borrowed `&dyn GenerateCommitMsg` instead of `Box<dyn>`, reducing heap allocation
+- `Config::load` and `wdir` initialized once in `run()` and passed down, removing redundant calls
 
+### Fixed
+- Typo in `SYSTEM_PROMPT` constant (`necesary` → `necessary`)
+- Clipboard feature gated behind a compile-time `cfg` flag, fixing a crash on platforms
+  without a system clipboard (e.g. Termux)
+
+### Tests
+- Unit tests for provider parsing across all `Provider` variants
+- Client construction test (`build_model_listing_client_works`) without real API keys
+- Coverage for `get_staged_files` — staged files and empty index cases
+- Config loading and merging tests (`AiConfig::merge`, `Config::load`, `Config::write_provider`, `Config::list_providers`)
+- Local config override verification (`test_local_config_is_loaded`)
+- Clipboard output test via `test_c_flag_works`
 ## [0.1.2] - 2026-05-15
 
 ### Fixed
