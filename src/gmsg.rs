@@ -258,6 +258,10 @@ mod test {
     #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
     #[tokio::test]
     async fn test_c_flag_works() -> Result<()> {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            eprintln!("Skipping: no display server available");
+            return Ok(());
+        }
         use arboard::Clipboard;
         let (repo, dir) = setup()?;
         let path = dir.path();
