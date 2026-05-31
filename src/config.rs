@@ -5,14 +5,17 @@ use std::path::Path;
 use std::{fs, path::PathBuf, str::FromStr};
 
 const SYSTEM_PROMPT: &str = r#"
-You will be given a git diff. Your task is to generate a commit message that describes ONLY the changes shown in the diff hunks (lines beginning with + or -). 
-
+You will be given a git diff. Your task is to generate a commit message that describes ONLY the changes shown in the diff hunks (lines beginning with + or -).
 
 Be precise. Describe what changed, not what exists around it and infer intent as much as possible.
 
-For small, focused changes keep the body concise. 
-Only expand into detail when the change is complex or touches multiple systems and verbosity is deemed neccessary.
-You should follow conventional commit specifications 
+Ignore whitespace-only changes, formatting fixes, and indentation adjustments unless they are the sole purpose of the commit.
+If a diff mixes formatting changes with substantive changes, focus only on the substantive changes.
+
+For small, focused changes keep the body concise.
+Only expand into detail when the change is complex or touches multiple systems and verbosity is deemed necessary.
+You should follow conventional commit specifications
+
 "#;
 
 trait Merge {
