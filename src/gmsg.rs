@@ -52,7 +52,6 @@ impl Gmsg {
         let wdir = cli.working_dir()?;
 
         let mut config = Config::load(&wdir)?;
-        eprintln!("{:?}", &config);
         if let Some(command) = &cli.command {
             return cli.handle_command(command, &mut config).await;
         }
@@ -249,8 +248,8 @@ mod test {
     use crate::config::Config;
     use crate::git::stage_files;
     use crate::test_utils::*;
-    use arboard::Clipboard;
     use anyhow::Result;
+    use arboard::Clipboard;
     #[tokio::test]
     async fn test_c_flag_works() -> Result<()> {
         let (repo, dir) = setup()?;
@@ -264,16 +263,15 @@ mod test {
             command: None,
         };
         let wdir = gmsg.working_dir()?;
-        let mut config = Config::load(&wdir)?;
-      
+        let  config = Config::load(&wdir)?;
+
         gmsg.handle_commit(&config, wdir).await?;
-                std::thread::sleep(std::time::Duration::from_secs(5));
+        std::thread::sleep(std::time::Duration::from_secs(5));
 
-        let  mut clipboard=Clipboard::new()?;
-        let received=clipboard.get_text()?;
+        let mut clipboard = Clipboard::new()?;
+        let received = clipboard.get_text()?;
 
-
-        assert_eq!(MOCK_RESPONSE,received);
+        assert_eq!(MOCK_RESPONSE, received);
 
         Ok(())
     }

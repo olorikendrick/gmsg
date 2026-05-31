@@ -11,8 +11,7 @@ use strum::EnumIter;
 use strum_macros::{Display, EnumString};
 use thiserror::Error;
 
-
-#[derive(Debug, Clone, Deserialize, Serialize, EnumString, Display, EnumIter)]
+#[derive(Debug, Clone, Deserialize, Serialize, EnumString, Display, EnumIter, PartialEq)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum Provider {
@@ -36,12 +35,11 @@ pub enum AiError {
     #[error("Unknown error: {0}")]
     Other(String),
 }
-
+#[derive(PartialEq, Debug)]
 pub struct ModelEntry {
     pub display: String,
     pub id: String,
 }
-
 
 #[async_trait::async_trait]
 pub trait GenerateCommitMsg {
@@ -52,7 +50,6 @@ pub trait GenerateCommitMsg {
 pub trait ListModels: Send + Sync {
     async fn list_models(&self) -> anyhow::Result<Vec<ModelEntry>>;
 }
-
 
 #[async_trait::async_trait]
 impl<M, P> GenerateCommitMsg for Agent<M, P>
@@ -117,7 +114,6 @@ impl From<ProviderClientError> for AiError {
         AiError::ProviderError(e.to_string())
     }
 }
-
 
 pub fn build_commit_agent(
     provider: Provider,
@@ -187,7 +183,6 @@ pub fn build_model_listing_client(provider: Provider) -> Result<Box<dyn ListMode
     Ok(client)
 }
 
-
 pub const MOCK_RESPONSE: &str = "feat: add file test.txt";
 
 pub struct MockAi {
@@ -219,13 +214,24 @@ impl ListModels for MockAi {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::git::stage_files;
     use crate::test_utils::setup;
     use anyhow::Result;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case("openai", Provider::OpenAI)]
+    #[case("gemini", Provider::Gemini)]
+    #[case("anthropic", Provider::Anthropic)]
+    #[case("cohere", Provider::Cohere)]
+    #[case("ollama", Provider::Ollama)]
+    #[case("mockai", Provider::MockAi)]
+    fn provider_from_string(#[case] input: &str, #[case] expected: Provider) {
+        assert_eq!(input.parse::<Provider>().unwrap(), expected)
+    }
 
     #[tokio::test]
     async fn test_commit_msg_gen() -> Result<()> {
@@ -239,4 +245,33 @@ mod tests {
         assert_eq!(msg, MOCK_RESPONSE);
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_model_listing() -> Result<()> {
+        let agent = MockAi::default();
+        let models = agent.list_models().await?;
+
+        assert_eq!(
+            models,
+            vec![ModelEntry {
+                display: "mock-model (mock-1)".to_string(),
+                id: "mock-1".to_string(),
+            }]
+        );
+
+        Ok(())
+    }
+
+
+    #[rstest]
+#[case(Provider::Gemini, "GEMINI_API_KEY")]
+#[case(Provider::OpenAI, "OPENAI_API_KEY")]
+#[case(Provider::Anthropic, "ANTHROPIC_API_KEY")]
+#[case(Provider::OpenRouter, "OPENROUTER_API_KEY")]
+fn build_model_listing_client_works(#[case] provider: Provider, #[case] env_key: &str) {
+   unsafe { std::env::set_var(env_key, "fake-key") };
+    let result = build_model_listing_client(provider);
+
+    assert!(result.is_ok());
+}
 }
