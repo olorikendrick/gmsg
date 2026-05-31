@@ -218,7 +218,6 @@ mod tests {
     fn test_local_config_is_loaded() -> anyhow::Result<()> {
         let (_, directory) = setup()?;
         let path = directory.path();
-        let config = Config::load_local(&path).unwrap();
         let expected = "[ai]\n provider = \"mockai\"\n model = \"mock-1\"\n prompt=\"hey\"";
         let received = fs::read_to_string(path.join(".gmsgconfig.toml"))?;
 

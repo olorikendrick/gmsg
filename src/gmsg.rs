@@ -211,12 +211,18 @@ impl OutputAction {
     fn execute(self, repository: &Repository) -> Result<()> {
         match self {
             OutputAction::Copy(msg) => {
-                let mut clipboard = Clipboard::new().context("Failed to get system clipboard")?;
-                clipboard
-                    .set_text(&msg)
-                    .context("Failed to set clipboard")?;
-                std::thread::sleep(std::time::Duration::from_secs(3));
-                eprintln!("Copied to clipboard: {}", &msg);
+                #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
+                {
+                    let mut clipboard =
+                        Clipboard::new().context("Failed to get system clipboard")?;
+                    clipboard
+                        .set_text(&msg)
+                        .context("Failed to set clipboard")?;
+                    std::thread::sleep(std::time::Duration::from_secs(3));
+                    eprintln!("Copied to clipboard: {}", &msg);
+                }
+                #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
+                eprintln!("Copying is not yet supported on this platform");
             }
             OutputAction::Commit(msg) => match commit(repository, &msg) {
                 Ok(_) => eprintln!("Committed with message:\n{}", msg),
@@ -249,9 +255,10 @@ mod test {
     use crate::git::stage_files;
     use crate::test_utils::*;
     use anyhow::Result;
-    use arboard::Clipboard;
+    #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
     #[tokio::test]
     async fn test_c_flag_works() -> Result<()> {
+        use arboard::Clipboard;
         let (repo, dir) = setup()?;
         let path = dir.path();
         stage_files(&["test.txt".to_string()], &repo)?;
@@ -263,7 +270,7 @@ mod test {
             command: None,
         };
         let wdir = gmsg.working_dir()?;
-        let  config = Config::load(&wdir)?;
+        let config = Config::load(&wdir)?;
 
         gmsg.handle_commit(&config, wdir).await?;
         std::thread::sleep(std::time::Duration::from_secs(5));

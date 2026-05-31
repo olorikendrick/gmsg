@@ -262,16 +262,15 @@ mod tests {
         Ok(())
     }
 
-
     #[rstest]
-#[case(Provider::Gemini, "GEMINI_API_KEY")]
-#[case(Provider::OpenAI, "OPENAI_API_KEY")]
-#[case(Provider::Anthropic, "ANTHROPIC_API_KEY")]
-#[case(Provider::OpenRouter, "OPENROUTER_API_KEY")]
-fn build_model_listing_client_works(#[case] provider: Provider, #[case] env_key: &str) {
-   unsafe { std::env::set_var(env_key, "fake-key") };
-    let result = build_model_listing_client(provider);
+    #[case(Provider::Gemini, "GEMINI_API_KEY")]
+    #[case(Provider::OpenAI, "OPENAI_API_KEY")]
+    #[case(Provider::Anthropic, "ANTHROPIC_API_KEY")]
+    #[case(Provider::OpenRouter, "OPENROUTER_API_KEY")]
+    fn build_model_listing_client_works(#[case] provider: Provider, #[case] env_key: &str) {
+        unsafe { std::env::set_var(env_key, "fake-key") };
+        let result = build_model_listing_client(provider);
 
-    assert!(result.is_ok());
-}
+        assert!(result.is_ok());
+    }
 }
