@@ -4,7 +4,6 @@ use crate::config::Config;
 use crate::git::{commit, get_diff};
 use crate::tui::{TerminalGuard, editor::Editor, selector::Selector};
 use anyhow::{Context, Result};
-use arboard::Clipboard;
 use clap::{Parser, Subcommand};
 use git2::Repository;
 use std::io::IsTerminal;
@@ -213,6 +212,8 @@ impl OutputAction {
             OutputAction::Copy(msg) => {
                 #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
                 {
+                    use arboard::Clipboard;
+
                     let mut clipboard =
                         Clipboard::new().context("Failed to get system clipboard")?;
                     clipboard

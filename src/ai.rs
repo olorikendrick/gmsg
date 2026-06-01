@@ -1,4 +1,5 @@
 use http::status::StatusCode;
+use indicatif::{ProgressBar, ProgressStyle};
 use rig::{
     agent::{Agent, PromptHook},
     client::{CompletionClient, ModelListingClient, ProviderClient, ProviderClientError},
@@ -7,9 +8,11 @@ use rig::{
     providers::{anthropic, cohere, gemini, ollama, openai, openrouter},
 };
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 use strum::EnumIter;
 use strum_macros::{Display, EnumString};
 use thiserror::Error;
+use tokio::time::timeout;
 
 #[derive(Debug, Clone, Deserialize, Serialize, EnumString, Display, EnumIter, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -35,6 +38,7 @@ pub enum AiError {
     #[error("Unknown error: {0}")]
     Other(String),
 }
+
 #[derive(PartialEq, Debug)]
 pub struct ModelEntry {
     pub display: String,
@@ -51,6 +55,25 @@ pub trait ListModels: Send + Sync {
     async fn list_models(&self) -> anyhow::Result<Vec<ModelEntry>>;
 }
 
+fn start_progress_bar() -> ProgressBar {
+    let bar = ProgressBar::new(30);
+    bar.set_style(ProgressStyle::with_template("{bar:40.cyan/blue} {msg}").unwrap());
+    bar.set_message("Generating commit message...");
+
+    let bar_clone = bar.clone();
+    tokio::spawn(async move {
+        for _ in 0..30 {
+            if bar_clone.is_finished() {
+                break;
+            }
+            bar_clone.inc(1);
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+    });
+
+    bar
+}
+
 #[async_trait::async_trait]
 impl<M, P> GenerateCommitMsg for Agent<M, P>
 where
@@ -58,7 +81,17 @@ where
     P: PromptHook<M> + 'static,
 {
     async fn generate_commit_msg(&self, diff: &str) -> Result<String, AiError> {
-        Ok(self.prompt(diff).await?)
+        let bar = start_progress_bar();
+
+        let result = timeout(Duration::from_secs(30), self.prompt(diff)).await;
+
+        bar.finish_and_clear();
+
+        match result {
+            Ok(Ok(msg)) => Ok(msg),
+            Ok(Err(e)) => Err(e.into()),
+            Err(_) => Err(AiError::Other("Request timed out after 30s".to_string())),
+        }
     }
 }
 
@@ -200,6 +233,12 @@ impl Default for MockAi {
 #[async_trait::async_trait]
 impl GenerateCommitMsg for MockAi {
     async fn generate_commit_msg(&self, _diff: &str) -> Result<String, AiError> {
+        let bar = start_progress_bar();
+
+        tokio::time::sleep(Duration::from_secs(5)).await;
+
+        bar.finish_and_clear();
+
         Ok(self.response.clone())
     }
 }
