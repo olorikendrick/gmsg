@@ -88,7 +88,7 @@ impl Selector {
         let items: Vec<ListItem> = self
             .items
             .iter()
-            .map(|e| ListItem::new(format!("  {}", e.display)))
+            .map(|e| ListItem::new(format!("  {}", e.name)))
             .collect();
 
         let list = List::new(items)

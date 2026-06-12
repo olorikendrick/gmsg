@@ -1,53 +1,61 @@
-use crate::ai::{GenerateCommitMsg, ListModels, ModelEntry};
+use crate::ai::{CompletionClient, ModelEntry, ModelProvider};
 use async_trait::async_trait;
 use reqwest::Client;
+use std::sync::Arc;
 
-const url: &str = "https://generativelanguage.googleapis.com/v1beta/";
-pub struct GeminiClient {
+const BASE_URL: &str = "https://generativelanguage.googleapis.com/v1beta/";
+
+struct GeminiConfig {
     client: Client,
     api_key: String,
+}
+
+pub struct GeminiProvider {
+    config: Arc<GeminiConfig>,
+}
+
+impl GeminiProvider {
+    pub fn new(api_key: String) -> Self {
+        let config = Arc::new(GeminiConfig {
+            client: Client::new(),
+            api_key,
+        });
+        Self { config }
+    }
+}
+
+#[async_trait]
+impl ModelProvider for GeminiProvider {
+    async fn list_models(&self) -> anyhow::Result<Vec<ModelEntry>> {
+        Ok(Vec::new())
+    }
+
+    fn into_completion_client(
+        &self,
+        model: ModelEntry,
+        sys_prompt: String,
+    ) -> anyhow::Result<Box<dyn CompletionClient>> {
+        Ok(Box::new(GeminiClient {
+            config: Arc::clone(&self.config),
+            model: model.name,
+            sys_prompt,
+        }))
+    }
+}
+
+pub struct GeminiClient {
+    config: Arc<GeminiConfig>,
     model: String,
     sys_prompt: String,
 }
 
-impl GeminiClient {
-    fn new(api_key: String) -> Self {
-        let client = Client::new();
-        Self {
-            client,
-            api_key,
-            model: String::new(),
-            sys_prompt: String::new(),
-        }
-    }
-
-    fn sys_prompt(mut self, prompt: String) -> Self {
-        self.sys_prompt = prompt;
-        self
-    }
-
-    fn model(mut self, model: ModelEntry) -> Self {
-        self.model = model.name;
-        self
-    }
-}
-
 #[async_trait]
-impl GenerateCommitMsg for GeminiClient {
-    async fn generate_commit_msg(
-        &self,
-        prompt: &str,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+impl CompletionClient for GeminiClient {
+    async fn generate_commit_msg(&self, _prompt: &str) -> anyhow::Result<String> {
         Ok(String::new())
     }
-}
 
-#[async_trait]
-impl ListModels for GeminiClient {
-    async fn list_models(
-        &self,
-    ) -> Result<Vec<ModelEntry>, Box<dyn std::error::Error + Send + Sync>> {
-        let models: Vec<ModelEntry> = Vec::new();
-        Ok(models)
+    async fn prompt(&self, _prompt: &str) -> anyhow::Result<String> {
+        Ok(String::new())
     }
 }

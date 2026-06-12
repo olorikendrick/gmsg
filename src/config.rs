@@ -1,4 +1,4 @@
-use crate::ai::{ModelEntry, Provider, build_model_listing_client};
+use crate::ai::{ModelEntry, ModelProvider, Provider};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -77,31 +77,15 @@ impl Config {
         Ok(config)
     }
 
-    pub fn write_model(&mut self, model: String) -> anyhow::Result<()> {
-        self.ai.model = model;
-        self.save()
-    }
-
-    pub fn write_provider(&mut self, provider: String) -> anyhow::Result<()> {
-        self.ai.provider = Provider::from_str(&provider).context("Invalid provider")?;
-        self.save()
-    }
-
-    pub fn write_prompt(&mut self, prompt: String) -> anyhow::Result<()> {
-        self.ai.prompt = Some(prompt);
-        self.save()
-    }
-
-    pub async fn list_models(provider: Provider) -> anyhow::Result<Vec<ModelEntry>> {
-        let client = build_model_listing_client(provider)?;
-        client.list_models().await
+    pub async fn list_models(provider: impl ModelProvider) -> anyhow::Result<Vec<ModelEntry>> {
+        provider.list_models().await
     }
 
     pub fn list_providers() -> Vec<ModelEntry> {
         use strum::IntoEnumIterator;
         Provider::iter()
             .map(|p| ModelEntry {
-                display: p.to_string(),
+                name: p.to_string(),
                 id: p.to_string(),
             })
             .collect()

@@ -1,4 +1,4 @@
-use crate::ai::GenerateCommitMsg;
+use crate::ai::{CompletionClient, ModelProvider};
 // gmsg.rs
 use crate::config::Config;
 use crate::git::{commit, get_diff};
@@ -122,7 +122,7 @@ impl Gmsg {
         &self,
         repository: &Repository,
         diff: String,
-        agent: &dyn GenerateCommitMsg,
+        agent: &dyn CompletionClient,
     ) -> anyhow::Result<()> {
         let mut msg = Self::strip_backtick(&agent.generate_commit_msg(&diff).await?);
 
@@ -158,7 +158,7 @@ impl Gmsg {
     async fn make_amends(
         repository: &Repository,
         diff: Option<String>,
-        agent: &dyn GenerateCommitMsg,
+        agent: &dyn CompletionClient,
     ) -> anyhow::Result<()> {
         let prev_commit = repository
             .head()
