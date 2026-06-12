@@ -1,9 +1,24 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumIter, EnumString};
-
 pub mod gemini;
-#[derive(Default)]
+pub mod mistral;
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum Role {
+    System,
+    User,
+    Assistant,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct Message {
+    pub role: Role,
+    pub content: String,
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct TokenUsage {
     pub prompt_tokens: u64,
     pub completion_tokens: u64,
@@ -13,19 +28,18 @@ pub struct TokenUsage {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ModelEntry {
     pub id: String,
-    pub name: String,
+    pub name: Option<String>,
 }
 
 #[async_trait]
 pub trait CompletionClient: Send + Sync {
-    async fn generate_commit_msg(&self, prompt: &str) -> anyhow::Result<(String, TokenUsage)>;
-    async fn prompt(&self, prompt: &str) -> anyhow::Result<(String, TokenUsage)>;
+    async fn generate_commit_msg(&self, diff: &str) -> anyhow::Result<(String, TokenUsage)>;
+    async fn prompt(&self, messages: &[Message]) -> anyhow::Result<(String, TokenUsage)>;
 }
 
 #[async_trait]
 pub trait ModelProvider {
     async fn list_models(&self) -> anyhow::Result<Vec<ModelEntry>>;
-
     fn create_completion_client(
         &self,
         model: ModelEntry,
@@ -36,6 +50,7 @@ pub trait ModelProvider {
 #[derive(Clone, Serialize, Deserialize, Debug, EnumString, EnumIter, Display)]
 pub enum Provider {
     Gemini,
+    Mistral,
 }
 
 impl Provider {
@@ -44,6 +59,10 @@ impl Provider {
             Provider::Gemini => {
                 use gemini::GeminiProvider;
                 Ok(Box::new(GeminiProvider::from_env()?))
+            }
+            Provider::Mistral => {
+                use mistral::MistralProvider;
+                Ok(Box::new(MistralProvider::from_env()?))
             }
         }
     }
