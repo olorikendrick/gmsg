@@ -1,4 +1,4 @@
-use crate::ai::{CompletionClient, ModelEntry, ModelProvider};
+use crate::ai::{CompletionClient, ModelEntry, ModelProvider, TokenUsage};
 use async_trait::async_trait;
 use reqwest::Client;
 use std::sync::Arc;
@@ -8,6 +8,15 @@ const BASE_URL: &str = "https://generativelanguage.googleapis.com/v1beta/";
 struct GeminiConfig {
     client: Client,
     api_key: String,
+}
+
+impl GeminiConfig {
+    pub fn from_env() -> anyhow::Result<Self> {
+        let api_key = std::env::var("GEMINI_API_KEY")?;
+
+        let client = reqwest::Client::new();
+        Ok(Self { api_key, client })
+    }
 }
 
 pub struct GeminiProvider {
@@ -22,6 +31,11 @@ impl GeminiProvider {
         });
         Self { config }
     }
+
+    pub fn from_env() -> anyhow::Result<Self> {
+        let config = Arc::new(GeminiConfig::from_env()?);
+        Ok(Self { config })
+    }
 }
 
 #[async_trait]
@@ -30,7 +44,7 @@ impl ModelProvider for GeminiProvider {
         Ok(Vec::new())
     }
 
-    fn into_completion_client(
+    fn create_completion_client(
         &self,
         model: ModelEntry,
         sys_prompt: String,
@@ -51,11 +65,13 @@ pub struct GeminiClient {
 
 #[async_trait]
 impl CompletionClient for GeminiClient {
-    async fn generate_commit_msg(&self, _prompt: &str) -> anyhow::Result<String> {
-        Ok(String::new())
+    async fn generate_commit_msg(&self, _prompt: &str) -> anyhow::Result<(String, TokenUsage)> {
+        let output = (String::new(), TokenUsage::default());
+        Ok(output)
     }
 
-    async fn prompt(&self, _prompt: &str) -> anyhow::Result<String> {
-        Ok(String::new())
+    async fn prompt(&self, _prompt: &str) -> anyhow::Result<(String, TokenUsage)> {
+        let output = (String::new(), TokenUsage::default());
+        Ok(output)
     }
 }
