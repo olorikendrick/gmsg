@@ -18,12 +18,11 @@ async-trait = "0.1.89"
 clap = { version = "4.6.1", features = ["derive"] }
 directories = "6.0.0"
 git2 = "0.20.4"
-http = "1.4.0"
 indicatif = "0.18.4"
 ratatui = "0.30.0"
 ratatui-textarea = "0.9.1"
-rig = "0.36.0"
-serde = "1.0.228"
+reqwest = "0.13.4"
+serde = { version = "1.0.228", features = ["derive"] }
 strum = { version = "0.28.0", features = ["derive", "strum_macros"] }
 strum_macros = "0.28.0"
 thiserror = "2.0.18"
