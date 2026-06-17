@@ -1,4 +1,4 @@
-use crate::ai::{CompletionClient, ModelEntry, ModelProvider, TokenUsage};
+use crate::ai::{CompletionClient, Message, ModelEntry, ModelProvider, TokenUsage};
 use async_trait::async_trait;
 use reqwest::Client;
 use std::sync::Arc;
@@ -51,7 +51,7 @@ impl ModelProvider for GeminiProvider {
     ) -> anyhow::Result<Box<dyn CompletionClient>> {
         Ok(Box::new(GeminiClient {
             config: Arc::clone(&self.config),
-            model: model.name,
+            model: model.id,
             sys_prompt,
         }))
     }
@@ -70,7 +70,7 @@ impl CompletionClient for GeminiClient {
         Ok(output)
     }
 
-    async fn prompt(&self, _prompt: &str) -> anyhow::Result<(String, TokenUsage)> {
+    async fn prompt(&self, messages: &[Message]) -> anyhow::Result<(String, TokenUsage)> {
         let output = (String::new(), TokenUsage::default());
         Ok(output)
     }

@@ -1,7 +1,7 @@
 [ai]
-provider = "Gemini"
+provider = "Mistral"
 sys_prompt = "You are an expert git assistant. Write a highly concise, descriptive conventional commit message based on the provided git diff. Do not wrap the output in markdown block text."
 
 [ai.model]
-id = "gemini-1.5-flash"
-name = "Gemini 1.5 Flash"
+id = "mistral-large-latest"
+name = "Mistral Large"

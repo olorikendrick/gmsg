@@ -1,4 +1,4 @@
-use crate::ai::ModelEntry;
+use crate::tui::TerminalGuard;
 use ratatui::{
     Frame,
     crossterm::event::{self, Event, KeyCode},
@@ -7,31 +7,29 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, ListState},
 };
+use std::fmt::Display;
 
-use crate::tui::TerminalGuard;
-
-pub struct Selector {
-    items: Vec<ModelEntry>,
+pub struct Selector<T> {
+    items: Vec<T>,
     state: ListState,
 }
 
-impl Selector {
-    pub fn new(items: Vec<ModelEntry>) -> Self {
+impl<T: Display + Clone> Selector<T> {
+    pub fn new(items: Vec<T>) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
         Self { items, state }
     }
 
-    pub fn run(&mut self, terminal: &mut TerminalGuard) -> anyhow::Result<Option<String>> {
+    pub fn run(&mut self, terminal: &mut TerminalGuard) -> anyhow::Result<Option<T>> {
         let terminal = &mut terminal.0;
         loop {
             terminal.draw(|f| self.render(f))?;
-
             if let Event::Key(key) = event::read()? {
                 match key.code {
                     KeyCode::Down | KeyCode::Char('j') => self.next(),
                     KeyCode::Up | KeyCode::Char('k') => self.previous(),
-                    KeyCode::Enter => return Ok(self.selected_id()),
+                    KeyCode::Enter => return Ok(self.selected()),
                     KeyCode::Esc | KeyCode::Char('q') => return Ok(None),
                     _ => {}
                 }
@@ -61,8 +59,8 @@ impl Selector {
         self.state.select(Some(i));
     }
 
-    fn selected_id(&self) -> Option<String> {
-        self.state.selected().map(|i| self.items[i].id.clone())
+    fn selected(&self) -> Option<T> {
+        self.state.selected().map(|i| self.items[i].clone())
     }
 
     fn render(&mut self, frame: &mut Frame) {
@@ -73,7 +71,6 @@ impl Selector {
         ])
         .areas(frame.area());
 
-        // header
         frame.render_widget(
             Line::from(Span::styled(
                 " Select an option",
@@ -84,11 +81,10 @@ impl Selector {
             header,
         );
 
-        // list
         let items: Vec<ListItem> = self
             .items
             .iter()
-            .map(|e| ListItem::new(format!("  {}", e.name)))
+            .map(|e| ListItem::new(format!("  {}", e)))
             .collect();
 
         let list = List::new(items)
@@ -103,7 +99,6 @@ impl Selector {
 
         frame.render_stateful_widget(list, list_area, &mut self.state);
 
-        // footer
         frame.render_widget(
             Line::from(vec![
                 Span::styled(" ↑↓ / jk", Style::default().fg(Color::DarkGray)),

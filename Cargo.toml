@@ -22,7 +22,7 @@ git2 = "0.20.4"
 indicatif = "0.18.4"
 ratatui = "0.30.0"
 ratatui-textarea = "0.9.1"
-reqwest = "0.13.4"
+reqwest = { version = "0.13.4", features = ["json"] }
 serde = { version = "1.0.228", features = ["derive"] }
 strum = { version = "0.28.0", features = ["derive", "strum_macros"] }
 strum_macros = "0.28.0"

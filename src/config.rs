@@ -14,10 +14,10 @@ pub struct AiConfig {
 impl Default for AiConfig {
     fn default() -> Self {
         Self {
-            provider: Provider::Gemini,
+            provider: Provider::Mistral,
             model: ModelEntry {
-                id: Cow::Borrowed("gemini-1.5-flash").into_owned(),
-                name: Cow::Borrowed("Gemini 1.5 Flash").into_owned(),
+                id: "mistral-large-latest".to_string(),
+                name: Some("Mistral Large".to_string()),
             },
             sys_prompt: "You are an expert git assistant. Write a highly concise, descriptive conventional commit message based on the provided git diff. Do not wrap the output in markdown block text.".to_string(),
         }

@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter};
+
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumIter, EnumString};
@@ -29,6 +31,13 @@ pub struct TokenUsage {
 pub struct ModelEntry {
     pub id: String,
     pub name: Option<String>,
+}
+
+impl Display for ModelEntry {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+       let label = self.name.as_deref().unwrap_or(&self.id);
+        write!(f, "{}", label)
+    }
 }
 
 #[async_trait]
