@@ -1,6 +1,5 @@
 use crate::ai::{ModelEntry, Provider};
 use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
 use std::fs;
 use std::path::{Path, PathBuf};
 

@@ -216,7 +216,7 @@ enum OutputAction {
 impl OutputAction {
     fn execute(self, repository: &Repository) -> Result<()> {
         match self {
-            OutputAction::Copy(msg) => {
+            OutputAction::Copy(_msg) => {
                 #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
                 {
                     use arboard::Clipboard;
