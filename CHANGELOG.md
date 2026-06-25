@@ -1,5 +1,33 @@
 # Changelog
+
+## [0.1.4] - 2026-06-25
+
+### Added
+- Gemini AI provider
+- Groq AI provider
+- Mistral AI provider
+- Full Android/Termux support via Termux API clipboard
+- `gmsg config show` — display current configuration
+- `gmsg config provider`, `models`, `prompt` subcommands (replaces old `config.provider` / `config.model` style)
+
+### Changed
+- Switched from `rustls-platform-verifier` to `native-tls` for Android/Termux compatibility
+- `rig` framework replaced with custom `reqwest`-based clients per provider
+- Configuration system overhauled using the `config` crate for layered loading (global + local)
+- Config file renamed from `.gmsgconfig.toml` to `.gmsg.toml`
+- `CompletionClient` trait now accepts message slices instead of a single message
+
+### Removed
+- Progress indicator
+- `rig` and its associated providers
+- `arboard` clipboard dependency (replaced by Termux API on Android, existing behaviour preserved elsewhere)
+
+### CI
+- Cross-platform release builds for Linux x86_64, ARMv7, AArch64, macOS, and Windows
+- OpenSSL installed and cached per platform
+
 ## [0.1.3] - 2026-05-31
+
 ### Added
 - `MockAi` provider for deterministic, offline testing without real API calls
 
@@ -21,6 +49,7 @@
 - Config loading and merging tests (`AiConfig::merge`, `Config::load`, `Config::write_provider`, `Config::list_providers`)
 - Local config override verification (`test_local_config_is_loaded`)
 - Clipboard output test via `test_c_flag_works`
+
 ## [0.1.2] - 2026-05-15
 
 ### Fixed
