@@ -216,7 +216,7 @@ enum OutputAction {
 impl OutputAction {
     fn execute(self, repository: &Repository) -> Result<()> {
         match self {
-            OutputAction::Copy(_msg) => {
+            OutputAction::Copy(msg) => {
                 #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
                 {
                     use arboard::Clipboard;
@@ -228,8 +228,32 @@ impl OutputAction {
                     std::thread::sleep(std::time::Duration::from_secs(3));
                     eprintln!("Copied to clipboard: {}", &msg);
                 }
-                #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
-                eprintln!("Copying is not yet supported on this platform");
+                #[cfg(target_os = "android")]
+                {
+                    let status = std::process::Command::new("termux-clipboard-set")
+                        .args([&msg])
+                        .status();
+
+                    match status {
+                        Ok(s) if s.success() => eprintln!("Copied to Android clipboard: {}", &msg),
+                        _ => {
+                            eprintln!("Failed to copy to Android clipboard.");
+                            eprintln!(
+                                "Hint: Make sure you have installed the Termux:API add-on app and run `pkg install termux-api`."
+                            );
+                        }
+                    }
+                }
+
+                #[cfg(not(any(
+                    target_os = "linux",
+                    target_os = "windows",
+                    target_os = "macos",
+                    target_os = "android"
+                )))]
+                {
+                    eprintln!("Copying is not yet supported on this platform.");
+                }
             }
             OutputAction::Commit(msg) => match commit(repository, &msg) {
                 Ok(_) => eprintln!("Committed with message:\n{}", msg),
