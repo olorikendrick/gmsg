@@ -3,6 +3,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Built with Ratatui](https://ratatui.rs/built-with-ratatui/badge.svg)](https://ratatui.rs/)
 [![Rust](https://img.shields.io/badge/rust-1.80%2B-orange.svg)](https://www.rust-lang.org/)
+
 # GMSG
 **AI-powered utility for generating conventional Git commit messages.**
 
@@ -16,20 +17,32 @@
 - **Interactive TUI:** Review and edit generated messages in a [Ratatui](https://ratatui.rs/)-powered editor before finalizing.
 - **UNIX Compliant:** Automatically discovers the closest git repository in your current folder with TTY/pipe-aware behavior.
 - **Clipboard & Amend Support:** Easily copy messages to your clipboard or amend the most recent commit.
-- **Multi-Provider and Model Support:** Built with [Rig](https://rig.rs/), providing excellent support for a wide range of LLM providers and models of your choice.
+- **Multi-Provider Support:** Choose from Gemini, Mistral, or Groq with full model selection per provider.
+- **Android/Termux Support:** Runs natively on Android via Termux, including clipboard support.
 
 ---
 
 ## 🛠 Installation
 
-*Ensure you have your appropriate API key set in your environment variables.*
+Set the API key for your chosen provider:
 
 ```bash
+# Gemini
 export GEMINI_API_KEY="your_api_key_here"
+
+# Mistral
+export MISTRAL_API_KEY="your_api_key_here"
+
+# Groq
+export GROQ_API_KEY="your_api_key_here"
+```
+
+```bash
 cargo install gmsg
 ```
 
 Or download a [prebuilt binary](https://github.com/olorikendrick/gmsg/releases/latest) for your platform.
+
 ---
 
 ## 📖 Usage
@@ -81,14 +94,15 @@ gmsg -a
 
 ## ⚙️ Configuration
 
-`gmsg` is zero-config by default.
-But you can configure it.
+`gmsg` is zero-config by default. Configure it with the `config` subcommand:
 
 ```bash
-gmsg config.provider   # set your LLM provider
-gmsg config.model      # set your model
-gmsg config.prompt <Prompt>    # customize the system prompt
+gmsg config provider        # interactively select your LLM provider and model
+gmsg config models          # change model for your current provider
+gmsg config prompt <prompt> # customize the system prompt
+gmsg config show            # display current configuration
 ```
+
 <img width="400" height="225" alt="2026-05-10 17-48-47" src="https://github.com/user-attachments/assets/fe77704f-4b55-4e45-bd03-a894a4706824" />
 
 | Flag | Long | Description |
@@ -98,15 +112,15 @@ gmsg config.prompt <Prompt>    # customize the system prompt
 | `-c` | `--copy` | Copies the message to clipboard and exits. |
 | `-a` | `--amend` | Amends the HEAD commit with the new message. |
 
-Configuration can be set in your project's `.gmsgconfig.toml` or your global config directory. Project-level config takes precedence.
+Configuration is stored in `.gmsg.toml` in your project root or your global config directory. Project-level config takes precedence.
 
 ---
 
 ## 🏗 Architecture
 
-- **Agent Logic:** Powered by the [`rig`](https://rig.rs/) crate for LLM orchestration.
+- **AI Providers:** Custom `reqwest`-based clients for Gemini, Mistral, and Groq — no framework dependency.
 - **Git Operations:** Uses [`git2-rs`](https://github.com/rust-lang/git2-rs) for robust interaction with Git.
-- **Terminal UI:** Built with [`ratatui`](https://ratatui.rs/) and `ratatui-textarea` for a smooth editing experience.
+- **Terminal UI:** Built with [`ratatui`](https://ratatui.rs/) for a smooth editing experience.
 - **Async Runtime:** Driven by [`tokio`](https://tokio.rs/) for non-blocking AI generation.
 
 ---
