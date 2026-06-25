@@ -8,18 +8,17 @@ use reqwest::Client;
 use reqwest::header::AUTHORIZATION;
 use serde::Deserialize;
 
-const BASE_URL: &str = "https://generativelanguage.googleapis.com/v1beta/";
-const OPENAI_BASE_URL: &str = "https://generativelanguage.googleapis.com/v1beta/openai/";
+const BASE_URL: &str = "https://api.groq.com/openai/v1/";
 
-pub struct GeminiProvider {
+pub struct GroqProvider {
     api_key: String,
     client: Client,
 }
 
-impl GeminiProvider {
+impl GroqProvider {
     pub fn from_env() -> anyhow::Result<Self> {
         Ok(Self {
-            api_key: std::env::var("GEMINI_API_KEY")?,
+            api_key: std::env::var("GROQ_API_KEY")?,
             client: Client::new(),
         })
     }
@@ -27,24 +26,22 @@ impl GeminiProvider {
 
 #[derive(Deserialize)]
 struct ModelsResponse {
-    models: Vec<GeminiModel>,
+    data: Vec<GroqModel>,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct GeminiModel {
-    name: String,
-    display_name: Option<String>,
-    supported_generation_methods: Vec<String>,
+struct GroqModel {
+    id: String,
 }
 
 #[async_trait]
-impl ModelProvider for GeminiProvider {
+impl ModelProvider for GroqProvider {
     async fn list_models(&self) -> anyhow::Result<Vec<ModelEntry>> {
         let body: ModelsResponse = self
             .client
             .get(format!("{}models", BASE_URL))
-            .query(&[("key", &self.api_key)])
+            .header(AUTHORIZATION, format!("Bearer {}", self.api_key))
             .send()
             .await?
             .error_for_status()?
@@ -52,17 +49,11 @@ impl ModelProvider for GeminiProvider {
             .await?;
 
         Ok(body
-            .models
+            .data
             .into_iter()
-            .filter(|m| {
-                m.supported_generation_methods
-                    .iter()
-                    .any(|a| a == "generateContent")
-            })
             .map(|m| ModelEntry {
-                // strip "models/" prefix to get bare id e.g. "gemini-1.5-flash"
-                id: m.name.trim_start_matches("models/").to_string(),
-                name: m.display_name,
+                id: m.id.to_string(),
+                name: None,
             })
             .collect())
     }
@@ -72,7 +63,7 @@ impl ModelProvider for GeminiProvider {
         model: ModelEntry,
         sys_prompt: String,
     ) -> anyhow::Result<Box<dyn CompletionClient>> {
-        Ok(Box::new(GeminiClient {
+        Ok(Box::new(GroqClient {
             client: self.client.clone(),
             api_key: self.api_key.clone(),
             model: model.id,
@@ -81,7 +72,7 @@ impl ModelProvider for GeminiProvider {
     }
 }
 
-pub struct GeminiClient {
+pub struct GroqClient {
     client: Client,
     api_key: String,
     model: String,
@@ -89,7 +80,7 @@ pub struct GeminiClient {
 }
 
 #[async_trait]
-impl CompletionClient for GeminiClient {
+impl CompletionClient for GroqClient {
     async fn generate_commit_msg(&self, diff: &str) -> anyhow::Result<(String, TokenUsage)> {
         let messages = vec![Message {
             role: Role::User,
@@ -118,7 +109,7 @@ impl CompletionClient for GeminiClient {
 
         let chat: ChatResponse = self
             .client
-            .post(format!("{}chat/completions", OPENAI_BASE_URL))
+            .post(format!("{}chat/completions", BASE_URL))
             .header(AUTHORIZATION, format!("Bearer {}", self.api_key))
             .json(&ChatRequest {
                 model: self.model.clone(),
@@ -135,7 +126,7 @@ impl CompletionClient for GeminiClient {
             .into_iter()
             .next()
             .map(|c| c.message.content)
-            .ok_or_else(|| anyhow::anyhow!("Gemini returned no choices"))?;
+            .ok_or_else(|| anyhow::anyhow!("Groq returned no choices"))?;
 
         Ok((text, chat.usage.unwrap_or_default()))
     }

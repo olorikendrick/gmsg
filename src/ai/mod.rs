@@ -4,7 +4,9 @@ use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumIter, EnumString};
 
 pub mod gemini;
+pub mod groq;
 pub mod mistral;
+
 pub mod types;
 
 pub use types::*;
@@ -29,6 +31,7 @@ pub trait ModelProvider {
 pub enum Provider {
     Gemini,
     Mistral,
+    Groq,
 }
 
 impl Provider {
@@ -36,6 +39,7 @@ impl Provider {
         match self {
             Provider::Gemini => Ok(Box::new(gemini::GeminiProvider::from_env()?)),
             Provider::Mistral => Ok(Box::new(mistral::MistralProvider::from_env()?)),
+            Provider::Groq => Ok(Box::new(groq::GroqProvider::from_env()?)),
         }
     }
 }
