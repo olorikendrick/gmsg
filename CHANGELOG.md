@@ -4,7 +4,7 @@
 
 - *(config)* Add pretty-print table for configuration display
 - *(ux)* Add progress spinner during commit message generation
-- *(gmsg)* Improve spinner and output feedback consistency
+- *(gmsg)* Add Colored output for success and failure
 
 ### 🚜 Refactor
 
