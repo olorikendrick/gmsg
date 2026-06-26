@@ -16,12 +16,13 @@ repository = "https://github.com/olorikendrick/gmsg"
 anyhow = "1.0.102"
 async-trait = "0.1.89"
 clap = { version = "4.6.1", features = ["derive"] }
+colored = "3.1.1"
+comfy-table = "7.2.2"
 config = "0.15.23"
 directories = "6.0.0"
 git2 = "0.20.4"
 indicatif = "0.18.4"
 ratatui = "0.30.0"
-ratatui-textarea = "0.9.1"
 reqwest = { version = "0.13.4", features = ["json", "native-tls", "query"] }
 serde = { version = "1.0.228", features = ["derive"] }
 strum = { version = "0.28.0", features = ["derive", "strum_macros"] }
