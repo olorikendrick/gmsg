@@ -1,7 +1,7 @@
 use crate::ai::CompletionClient;
 use crate::config::Config;
 use crate::git::{commit, get_diff};
-use crate::tui::{TerminalGuard, editor::Editor, selector::Selector};
+use crate::tui::{TerminalGuard, selector::Selector};
 use anyhow::{Context, Result};
 use clap::{Args, Parser, Subcommand};
 use git2::Repository;
@@ -129,19 +129,18 @@ impl Gmsg {
         agent: &dyn CompletionClient,
     ) -> anyhow::Result<()> {
         let (raw_msg, _usage) = agent.generate_commit_msg(&diff).await?;
-        let mut msg = Self::strip_backtick(&raw_msg);
+        let msg = Self::strip_backtick(&raw_msg);
 
-        if self.interactive {
-            let mut terminal = TerminalGuard::new();
-            msg = Editor::from(msg)
-                .run(&mut terminal)
-                .context("Failed to initialize inline editor")?;
-
-            if msg.is_empty() {
+        let msg = if self.interactive {
+            let edited = open_editor(repository, msg)?;
+            if edited.is_empty() {
                 eprintln!("Aborted commit operation");
                 return Ok(());
             }
-        }
+            edited
+        } else {
+            msg
+        };
 
         OutputAction::new(self, msg).execute(repository)
     }
@@ -173,22 +172,13 @@ impl Gmsg {
             }
         };
 
-        let mut terminal = TerminalGuard::new();
-        let out = Editor::from(editor_input)
-            .run(&mut terminal)
-            .context("Failed to initialize inline editor")?;
-
-        if out.is_empty() {
-            eprintln!("Aborted amend operation");
-            return Ok(());
-        }
-
+        let output = open_editor(repository, editor_input)?;
         let mut index = repository.index()?;
         index.read(true).context("Failed to read index")?;
         let tree_oid = index.write_tree()?;
         let tree = repository.find_tree(tree_oid)?;
 
-        prev_commit.amend(Some("HEAD"), None, None, None, Some(&out), Some(&tree))?;
+        prev_commit.amend(Some("HEAD"), None, None, None, Some(&output), Some(&tree))?;
 
         Ok(())
     }
@@ -204,6 +194,25 @@ impl Gmsg {
     fn strip_backtick(input: &str) -> String {
         input.replace('`', "")
     }
+}
+
+fn open_editor(repository: &Repository, content: String) -> anyhow::Result<String> {
+    let file_path = repository.path().join("COMMIT_MSG_EDIT");
+    std::fs::write(&file_path, &content)?;
+
+    std::process::Command::new(default_editor())
+        .arg(&file_path)
+        .spawn()
+        .context("Failed to open editor")?
+        .wait()
+        .context("Failed to wait for editor")?;
+
+    Ok(std::fs::read_to_string(&file_path)?)
+}
+
+fn default_editor() -> String {
+    let fallback = if cfg!(target_os = "windows") { "notepad" } else { "vi" };
+    std::env::var("EDITOR").unwrap_or( fallback.to_string())
 }
 
 #[derive(Debug)]
