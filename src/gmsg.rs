@@ -4,6 +4,7 @@ use crate::git::{commit, get_diff};
 use crate::tui::{TerminalGuard, selector::Selector};
 use anyhow::{Context, Result};
 use clap::{Args, Parser, Subcommand};
+use colored::Colorize;
 use git2::Repository;
 use indicatif::ProgressBar;
 use std::io::IsTerminal;
@@ -106,7 +107,7 @@ impl Gmsg {
         let diff = get_diff(&repository)?;
 
         if !self.amend && diff.is_none() {
-            eprintln!("No staged changes detected");
+            eprintln!("{}", "No staged changes detected".yellow());
             return Ok(());
         }
 
@@ -129,19 +130,16 @@ impl Gmsg {
         diff: String,
         agent: &dyn CompletionClient,
     ) -> anyhow::Result<()> {
-        let spinner = ProgressBar::new_spinner();
-        spinner.set_message("Generating Commit Message");
-        spinner.enable_steady_tick(std::time::Duration::from_millis(50));
-
+        let spinner = new_spinner("Generating commit message...");
         let (raw_msg, _usage) = agent.generate_commit_msg(&diff).await?;
-        spinner.finish_with_message("Done!");
+        spinner.finish_and_clear();
 
         let msg = Self::strip_backtick(&raw_msg);
 
         let msg = if self.interactive {
             let edited = open_editor(repository, msg)?;
             if edited.is_empty() {
-                eprintln!("Aborted commit operation");
+                eprintln!("{}", "Aborted commit operation".yellow());
                 return Ok(());
             }
             edited
@@ -169,17 +167,14 @@ impl Gmsg {
         let editor_input = match diff {
             None => prev_msg.clone(),
             Some(diff) => {
-                let spinner = ProgressBar::new_spinner();
-                spinner.set_message("Generating Commit Message");
-                spinner.enable_steady_tick(std::time::Duration::from_millis(50));
-
+                let spinner = new_spinner("Generating commit message...");
                 let (msg, _) = agent
                     .generate_commit_msg(&format!(
                         "Amend this commit message: {}\n\nWith this new diff:\n{}",
                         prev_msg, diff
                     ))
                     .await?;
-                spinner.finish_with_message("Done!");
+                spinner.finish_and_clear();
                 msg
             }
         };
@@ -191,6 +186,7 @@ impl Gmsg {
         let tree = repository.find_tree(tree_oid)?;
 
         prev_commit.amend(Some("HEAD"), None, None, None, Some(&output), Some(&tree))?;
+        eprintln!("{}", "Commit amended successfully".green());
 
         Ok(())
     }
@@ -208,6 +204,13 @@ impl Gmsg {
     }
 }
 
+fn new_spinner(message: &str) -> ProgressBar {
+    let spinner = ProgressBar::new_spinner();
+    spinner.set_message(message.to_string());
+    spinner.enable_steady_tick(std::time::Duration::from_millis(50));
+    spinner
+}
+
 fn open_editor(repository: &Repository, content: String) -> anyhow::Result<String> {
     let file_path = repository.path().join("COMMIT_MSG_EDIT");
     std::fs::write(&file_path, &content)?;
@@ -223,11 +226,7 @@ fn open_editor(repository: &Repository, content: String) -> anyhow::Result<Strin
 }
 
 fn default_editor() -> String {
-    let fallback = if cfg!(target_os = "windows") {
-        "notepad"
-    } else {
-        "nano"
-    };
+    let fallback = if cfg!(target_os = "windows") { "notepad" } else { "nano" };
     std::env::var("EDITOR").unwrap_or(fallback.to_string())
 }
 
@@ -251,7 +250,7 @@ impl OutputAction {
                         .set_text(&msg)
                         .context("Failed to set clipboard")?;
                     std::thread::sleep(std::time::Duration::from_secs(3));
-                    eprintln!("Copied to clipboard: {}", &msg);
+                    eprintln!("{}", format!("Copied to clipboard:\n{}", msg).green());
                 }
                 #[cfg(target_os = "android")]
                 {
@@ -260,11 +259,14 @@ impl OutputAction {
                         .status();
 
                     match status {
-                        Ok(s) if s.success() => eprintln!("Copied to Android clipboard: {}", &msg),
+                        Ok(s) if s.success() => {
+                            eprintln!("{}", format!("Copied to Android clipboard:\n{}", msg).green());
+                        }
                         _ => {
-                            eprintln!("Failed to copy to Android clipboard.");
+                            eprintln!("{}", "Failed to copy to Android clipboard.".red());
                             eprintln!(
-                                "Hint: Make sure you have installed the Termux:API add-on app and run `pkg install termux-api`."
+                                "{}",
+                                "Hint: Make sure you have installed the Termux:API add-on app and run `pkg install termux-api`.".yellow()
                             );
                         }
                     }
@@ -277,12 +279,12 @@ impl OutputAction {
                     target_os = "android"
                 )))]
                 {
-                    eprintln!("Copying is not yet supported on this platform.");
+                    eprintln!("{}", "Copying is not yet supported on this platform.".yellow());
                 }
             }
             OutputAction::Commit(msg) => match commit(repository, &msg) {
-                Ok(_) => eprintln!("Committed with message:\n{}", msg),
-                Err(e) => eprintln!("Error while committing: {:?}", e),
+                Ok(_) => eprintln!("{}", format!("Committed with message:\n{}", msg).green()),
+                Err(e) => eprintln!("{}", format!("Error while committing: {:?}", e).red()),
             },
             OutputAction::Pipe(msg) => {
                 println!("{}", msg);
