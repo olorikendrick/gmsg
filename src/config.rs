@@ -1,4 +1,6 @@
 use crate::ai::{ModelEntry, Provider};
+use comfy_table::{Attribute, Cell, Color, ContentArrangement, Table, presets::UTF8_FULL};
+use ratatui::prelude::Stylize;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -86,5 +88,50 @@ impl Config {
         let toml_string = toml::to_string_pretty(self)?;
         fs::write(target_path, toml_string)?;
         Ok(())
+    }
+
+    pub fn pretty_print(&self) {
+        let mut table = Table::new();
+
+        // Stylize the table borders and headers
+        table
+            .load_preset(UTF8_FULL)
+            .set_content_arrangement(ContentArrangement::Dynamic)
+            .set_header(vec![
+                Cell::new("Configuration Category")
+                    .add_attribute(Attribute::Bold)
+                    .fg(Color::Cyan),
+                Cell::new("Setting")
+                    .add_attribute(Attribute::Bold)
+                    .fg(Color::Cyan),
+                Cell::new("Value")
+                    .add_attribute(Attribute::Bold)
+                    .fg(Color::Cyan),
+            ]);
+
+        // Add rows for AI Config
+        table.add_row(vec![
+            "AI Provider",
+            "Model ID",
+            &self.ai.provider.to_string().green().to_string(),
+        ]);
+
+        table.add_row(vec![
+            "AI Model",
+            "Selected Model",
+            &self.ai.model.id.clone().yellow().to_string(),
+        ]);
+
+        table.add_row(vec![
+            "System Prompt",
+            "Truncated Preview",
+            &format!(
+                "{}...",
+                &self.ai.sys_prompt.chars().take(40).collect::<String>()
+            ),
+        ]);
+
+        println!("\n{}", "Current Configuration".bold().underlined());
+        println!("{table}");
     }
 }
