@@ -5,6 +5,7 @@ use crate::tui::{TerminalGuard, selector::Selector};
 use anyhow::{Context, Result};
 use clap::{Args, Parser, Subcommand};
 use git2::Repository;
+use indicatif::ProgressBar;
 use std::io::IsTerminal;
 use std::path::PathBuf;
 use strum::IntoEnumIterator;
@@ -128,7 +129,13 @@ impl Gmsg {
         diff: String,
         agent: &dyn CompletionClient,
     ) -> anyhow::Result<()> {
+        let spinner = ProgressBar::new_spinner();
+        spinner.set_message("Generating Commit Message");
+        spinner.enable_steady_tick(std::time::Duration::from_millis(50));
+
         let (raw_msg, _usage) = agent.generate_commit_msg(&diff).await?;
+        spinner.finish_with_message("Done!");
+
         let msg = Self::strip_backtick(&raw_msg);
 
         let msg = if self.interactive {
@@ -162,12 +169,17 @@ impl Gmsg {
         let editor_input = match diff {
             None => prev_msg.clone(),
             Some(diff) => {
+                let spinner = ProgressBar::new_spinner();
+                spinner.set_message("Generating Commit Message");
+                spinner.enable_steady_tick(std::time::Duration::from_millis(50));
+
                 let (msg, _) = agent
                     .generate_commit_msg(&format!(
                         "Amend this commit message: {}\n\nWith this new diff:\n{}",
                         prev_msg, diff
                     ))
                     .await?;
+                spinner.finish_with_message("Done!");
                 msg
             }
         };
