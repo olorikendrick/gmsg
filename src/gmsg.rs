@@ -90,7 +90,7 @@ impl Gmsg {
                     config.save_to(None)?;
                 }
                 ConfigSubcommand::Show => {
-                    println!("{:#?}", config);
+                    config.pretty_print();
                 }
             },
         }
@@ -211,8 +211,12 @@ fn open_editor(repository: &Repository, content: String) -> anyhow::Result<Strin
 }
 
 fn default_editor() -> String {
-    let fallback = if cfg!(target_os = "windows") { "notepad" } else { "vi" };
-    std::env::var("EDITOR").unwrap_or( fallback.to_string())
+    let fallback = if cfg!(target_os = "windows") {
+        "notepad"
+    } else {
+        "nano"
+    };
+    std::env::var("EDITOR").unwrap_or(fallback.to_string())
 }
 
 #[derive(Debug)]
